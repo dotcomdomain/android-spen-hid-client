@@ -38,22 +38,29 @@ import me.arianb.usb_hid_client.input_views.touch_input_handlers.TouchInputHandl
 import me.arianb.usb_hid_client.report_senders.pointer_device_senders.MouseSender
 import me.arianb.usb_hid_client.report_senders.pointer_device_senders.PointerDeviceSender
 import me.arianb.usb_hid_client.report_senders.pointer_device_senders.TouchpadSender
+import me.arianb.usb_hid_client.settings.SettingsViewModel
 
 @Composable
 fun Touchpad(
-    mainViewModel: MainViewModel = viewModel()
+    mainViewModel: MainViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val pointerDeviceSender by mainViewModel.touchpadSender.collectAsState()
+    val preferences by settingsViewModel.userPreferencesFlow.collectAsState()
 
     when (val it = pointerDeviceSender) {
         is TouchpadSender -> {
-            val touchInputHandler = remember { TouchInputHandler(it) }
+            val touchInputHandler = remember(it, preferences.precisionTouchpadSensitivity) {
+                TouchInputHandler(it, preferences.precisionTouchpadSensitivity)
+            }
 
             TouchpadForTouchpad(touchInputHandler)
         }
 
         is MouseSender -> {
-            val mouseInputHandler = remember { MouseInputHandler(it) }
+            val mouseInputHandler = remember(it, preferences.touchpadMouseSensitivity) {
+                MouseInputHandler(it, preferences.touchpadMouseSensitivity)
+            }
 
             TouchpadForMouse(mouseInputHandler)
         }

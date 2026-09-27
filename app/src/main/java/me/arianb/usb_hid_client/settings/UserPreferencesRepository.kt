@@ -62,6 +62,10 @@ sealed class AppPreference(val preference: PreferenceKey<*>) {
         BooleanPreferenceKey("disable_gadget_functions_during_config", false)
 
     data object EnablePrecisionTouchpad : BooleanPreferenceKey("enable_precision_touchpad", false)
+    data object TouchpadMouseSensitivity :
+        FloatPreferenceKey("touchpad_mouse_sensitivity", 1f)
+    data object PrecisionTouchpadSensitivity :
+        FloatPreferenceKey("precision_touchpad_sensitivity", 1f)
 
     data object EnableScriptingSupport: BooleanPreferenceKey("enable_scripting_support", false)
 }
@@ -98,6 +102,8 @@ data class UserPreferences(
     val createNewGadgetForFunctions: Boolean,
     val disableGadgetFunctionsDuringConfiguration: Boolean,
     val enablePrecisionTouchpad: Boolean,
+    val touchpadMouseSensitivity: Float,
+    val precisionTouchpadSensitivity: Float,
     val enableScriptingSupport: Boolean,
 )
 
@@ -147,6 +153,8 @@ class UserPreferencesRepository private constructor(application: Application) {
                 createNewGadgetForFunctions = AppPreference.CreateNewGadgetForFunctions.getValue(),
                 disableGadgetFunctionsDuringConfiguration = AppPreference.DisableGadgetFunctionsDuringConfiguration.getValue(),
                 enablePrecisionTouchpad = AppPreference.EnablePrecisionTouchpad.getValue(),
+                touchpadMouseSensitivity = AppPreference.TouchpadMouseSensitivity.getValue(),
+                precisionTouchpadSensitivity = AppPreference.PrecisionTouchpadSensitivity.getValue(),
                 enableScriptingSupport = AppPreference.EnableScriptingSupport.getValue(),
             )
         }

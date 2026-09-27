@@ -7,11 +7,14 @@ import me.arianb.usb_hid_client.report_senders.pointer_device_senders.PointerDev
 import timber.log.Timber
 
 class MouseInputHandler(
-    private val mouseSender: MouseSender
+    private val mouseSender: MouseSender,
+    private val sensitivity: Float = 1f
 ) : PointerDeviceInputHandler() {
     private data class Coordinates<T>(val x: T, val y: T)
 
     private var previousCoordinates: Coordinates<Short>? = null
+    private var xRemainder = 0f
+    private var yRemainder = 0f
     private var currentTouchpadButtonState: PointerDeviceSender.TouchpadButtonState =
         PointerDeviceSender.TouchpadButtonState(
             isLeftButtonPressed = false,
@@ -34,6 +37,11 @@ class MouseInputHandler(
     private var activePointerId: Int? = null
 
     fun handleTouchEvent(motionEvent: MotionEvent): Boolean {
+        if (motionEvent.actionMasked == MotionEvent.ACTION_DOWN) {
+            previousCoordinates = null
+            xRemainder = 0f
+            yRemainder = 0f
+        }
         val (pointerX, pointerY) = run {
             val pointerIndexWrapper = getActivePointerInfo(motionEvent)
             val pointerIndex = pointerIndexWrapper.index
@@ -64,6 +72,11 @@ class MouseInputHandler(
         }
 
         this.sendAbsoluteMouseMovement(pointerX.toShort(), pointerY.toShort(), currentTouchpadButtonState)
+        if (motionEvent.actionMasked == MotionEvent.ACTION_UP ||
+            motionEvent.actionMasked == MotionEvent.ACTION_CANCEL) {
+            previousCoordinates = null
+            activePointerId = null
+        }
 
         return true
     }
@@ -137,7 +150,13 @@ class MouseInputHandler(
             currentTouchpadButtonState = touchpadButtonState
         }
 
-        return mouseSender.sendMouseReport(difference.x.toByte(), difference.y.toByte(), currentTouchpadButtonState)
+        val scaledX = difference.x * sensitivity + xRemainder
+        val scaledY = difference.y * sensitivity + yRemainder
+        val movementX = scaledX.toInt()
+        val movementY = scaledY.toInt()
+        xRemainder = scaledX - movementX
+        yRemainder = scaledY - movementY
+        sendMovement(movementX, movementY)
     }
 
     fun sendRelativeMouseMovement(
@@ -158,7 +177,19 @@ class MouseInputHandler(
             currentTouchpadButtonState = touchpadButtonState
         }
 
-        return mouseSender.sendMouseReport(relativeX, relativeY, currentTouchpadButtonState)
+        sendMovement(relativeX.toInt(), relativeY.toInt())
+    }
+
+    private fun sendMovement(x: Int, y: Int) {
+        var remainingX = x
+        var remainingY = y
+        do {
+            val chunkX = remainingX.coerceIn(-127, 127)
+            val chunkY = remainingY.coerceIn(-127, 127)
+            mouseSender.sendRelativeMouseReport(chunkX, chunkY, currentTouchpadButtonState)
+            remainingX -= chunkX
+            remainingY -= chunkY
+        } while (remainingX != 0 || remainingY != 0)
     }
 
     // Send new button state with 0 relative mouse movement

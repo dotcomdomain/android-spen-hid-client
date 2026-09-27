@@ -38,6 +38,20 @@ sealed class BooleanPreferenceKey : PreferenceKey<Boolean> {
     }
 }
 
+sealed class FloatPreferenceKey : PreferenceKey<Float> {
+    constructor(key: String, defaultValue: Float) : super(key, defaultValue)
+
+    override fun getValue(sharedPreferences: SharedPreferences): Float {
+        return sharedPreferences.getFloat(key, defaultValue)
+    }
+
+    override fun setValue(sharedPreferences: SharedPreferences, value: Float) {
+        edit(sharedPreferences) {
+            putFloat(key, value)
+        }
+    }
+}
+
 sealed class StringPreferenceKey : PreferenceKey<String> {
     constructor(key: String, defaultValue: String) : super(key, defaultValue)
 

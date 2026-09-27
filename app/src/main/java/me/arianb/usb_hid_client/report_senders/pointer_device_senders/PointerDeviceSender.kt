@@ -10,6 +10,10 @@ sealed class PointerDeviceSender(
 ) : ReportSender(
     touchpadDevicePath
 ) {
+    fun sendRelativeMouseReport(x: Int, y: Int, buttons: TouchpadButtonState) {
+        addReportToChannel(byteArrayOf(1, buttons.toByte(), x.toByte(), y.toByte()) + ByteArray(5))
+    }
+
     abstract fun send(
         contactID: Byte,
         tipSwitch: Boolean,
