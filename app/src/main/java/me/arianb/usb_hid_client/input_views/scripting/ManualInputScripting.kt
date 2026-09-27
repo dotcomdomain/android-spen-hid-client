@@ -70,6 +70,7 @@ fun ManualInputForScripting(
             label = { Text(stringResource(R.string.manual_input)) },
             onValueChange = { manualInputString = it },
             maxLines = 3,
+            shape = RoundedCornerShape(20.dp),
         )
 
         Row(

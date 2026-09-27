@@ -35,6 +35,8 @@ sealed class AppPreference(val preference: PreferenceKey<*>) {
     )
 
     data object DynamicColorKey : BooleanPreferenceKey("dynamic_color", false)
+    data object HideStatusBar : BooleanPreferenceKey("hide_status_bar", false)
+    data object HideAppTitle : BooleanPreferenceKey("hide_app_title", false)
     data object LoopbackMode : BooleanPreferenceKey("loopback_mode", false)
     data object ExperimentalMode : BooleanPreferenceKey("experimental_mode", false)
     data object TouchpadFullscreenInLandscape : BooleanPreferenceKey("touchpad_fullscreen_in_landscape", false)
@@ -103,6 +105,8 @@ data class UserPreferences(
     val isVolumeButtonPassthroughEnabled: Boolean,
     val appTheme: AppTheme,
     val isDynamicColorEnabled: Boolean,
+    val hideStatusBar: Boolean,
+    val hideAppTitle: Boolean,
     val isLoopbackModeEnabled: Boolean,
     val isTouchpadFullscreenInLandscape: Boolean,
     val isExperimentalModeEnabled: Boolean,
@@ -169,6 +173,8 @@ class UserPreferencesRepository private constructor(application: Application) {
                 isVolumeButtonPassthroughEnabled = AppPreference.VolumeButtonPassthroughKey.getValue(),
                 appTheme = AppPreference.AppThemeKey.getValue(),
                 isDynamicColorEnabled = AppPreference.DynamicColorKey.getValue(),
+                hideStatusBar = AppPreference.HideStatusBar.getValue(),
+                hideAppTitle = AppPreference.HideAppTitle.getValue(),
                 isLoopbackModeEnabled = AppPreference.LoopbackMode.getValue(),
                 isTouchpadFullscreenInLandscape = AppPreference.TouchpadFullscreenInLandscape.getValue(),
                 isExperimentalModeEnabled = AppPreference.ExperimentalMode.getValue(),

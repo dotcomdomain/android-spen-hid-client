@@ -3,16 +3,31 @@ package me.arianb.usb_hid_client
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Usb
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -25,11 +40,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -37,17 +60,18 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import me.arianb.usb_hid_client.input_views.DirectInput
 import me.arianb.usb_hid_client.input_views.DirectInputIconButton
-import me.arianb.usb_hid_client.input_views.ManualInput
-import me.arianb.usb_hid_client.input_views.scripting.ScriptsDisplayView
 import me.arianb.usb_hid_client.input_views.Touchpad
-import me.arianb.usb_hid_client.input_views.scripting.ManualInputForScripting
+import me.arianb.usb_hid_client.input_views.scripting.ScriptsDisplayView
 import me.arianb.usb_hid_client.settings.SettingsScreen
 import me.arianb.usb_hid_client.settings.SettingsViewModel
 import me.arianb.usb_hid_client.shell_utils.RootStateHolder
 import me.arianb.usb_hid_client.troubleshooting.TroubleshootingScreen
 import me.arianb.usb_hid_client.ui.standalone_screens.HelpScreen
 import me.arianb.usb_hid_client.ui.standalone_screens.InfoScreen
+import me.arianb.usb_hid_client.ui.theme.CornerExtraLarge
+import me.arianb.usb_hid_client.ui.theme.CornerLargeIncreased
 import me.arianb.usb_hid_client.ui.theme.PaddingNormal
+import me.arianb.usb_hid_client.ui.theme.PaddingSmall
 import me.arianb.usb_hid_client.ui.utils.BasicPage
 import me.arianb.usb_hid_client.ui.utils.BasicTopBar
 import me.arianb.usb_hid_client.ui.utils.DarkLightModePreviews
@@ -68,13 +92,16 @@ fun MainPage(
     val rootStateHolder = RootStateHolder.getInstance()
     val rootState by rootStateHolder.uiState.collectAsState()
 
-    // TODO: should i do this in VM constructor? but then I cant differentiate between
-    //       missing char dev on startup or a weird issue of it missing AFTER startup.
-    //       but should I even do that? should I just handle both situations the same way?
     val showMissingCharDeviceOnStartupAlert = remember { mutableStateOf(mainViewModel.anyCharacterDeviceMissing()) }
 
     val uiState by mainViewModel.uiState.collectAsState()
     Timber.d("in MainScreen, uiState is: %s", uiState.toString())
+
+    LaunchedEffect(uiState.missingCharacterDevice) {
+        if (!uiState.missingCharacterDevice) {
+            showMissingCharDeviceOnStartupAlert.value = false
+        }
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -82,38 +109,25 @@ fun MainPage(
     val isDeviceInLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val fullScreenTouchPadEnabled = preferences.isTouchpadFullscreenInLandscape && isDeviceInLandscape
 
-    val padding = PaddingNormal
     BasicPage(
         snackbarHostState = snackbarHostState,
-        topBar = { MainTopBar() },
-
-        // The padding below the top app bar is pretty big, so omit top padding
-        padding = PaddingValues(start = padding, end = padding, bottom = padding),
-
+        topBar = if (fullScreenTouchPadEnabled) { {} } else {
+            { MainTopBar(showTitle = !preferences.hideAppTitle) }
+        },
+        padding = if (fullScreenTouchPadEnabled) PaddingValues(PaddingNormal) else PaddingValues(start = PaddingNormal, end = PaddingNormal, bottom = PaddingNormal),
+        contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
         horizontalAlignment = Alignment.CenterHorizontally,
-
-        // I have to manually manage the spacing of elements here, because of the special case of having an invisible
-        // View (Direct Input). Otherwise, there's gonna be an awkward spacing created by the invisible View.
-        verticalArrangement = Arrangement.Top
+        verticalArrangement = if (fullScreenTouchPadEnabled) Arrangement.Top else Arrangement.spacedBy(10.dp, Alignment.Top)
     ) {
         if (showMissingCharDeviceOnStartupAlert.value) {
             Timber.d("MISSING CHAR DEV ON START")
             CreateCharDevicesAlertDialog(showMissingCharDeviceOnStartupAlert)
         }
 
-        if (!fullScreenTouchPadEnabled) {
-
-            if(preferences.enableScriptingSupport) {
-                ManualInputForScripting()
-                ScriptsDisplayView()
-            } else {
-                ManualInput()
-                Spacer(Modifier.height(PaddingNormal))
-            }
+        if (!fullScreenTouchPadEnabled && preferences.enableScriptingSupport) {
+            ScriptsDisplayView()
         }
 
-        // This has to be here, if I move it below Touchpad(), it never gets focused. I think it's because it ends up
-        // out of the user's view, so Android just doesn't allow it to gain focus.
         DirectInput()
 
         Touchpad()
@@ -121,11 +135,13 @@ fun MainPage(
         LaunchedEffect(uiState) {
             Timber.d("LAUNCHED EFFECT RUNNING WITH UI STATE = %s", uiState.toString())
             if (rootState.missingRootPrivileges) {
-                // TODO: if this fails here, I need to make it incredibly clear that the app will not work.
-                //       right now, you can still try to use it and it'll fail. It should just "lock" the inputs
-                //       if this fails I think.
                 snackbarHostState.showSnackbar(
                     message = "Missing root permissions",
+                    duration = SnackbarDuration.Long
+                )
+            } else if (uiState.usbHidKernelUnsupported) {
+                snackbarHostState.showSnackbar(
+                    message = "This kernel has no USB HID gadget function. Pointer output requires a compatible kernel.",
                     duration = SnackbarDuration.Long
                 )
             } else if (uiState.isDeviceUnplugged) {
@@ -142,7 +158,6 @@ fun MainPage(
                     SnackbarResult.ActionPerformed -> {
                         mainViewModel.createCharacterDevices()
                     }
-
                     SnackbarResult.Dismissed -> {}
                 }
             } else if (uiState.isCharacterDevicePermissionsBroken != null) {
@@ -155,7 +170,6 @@ fun MainPage(
                     SnackbarResult.ActionPerformed -> {
                         mainViewModel.fixCharacterDevicePermissions(characterDevicePath)
                     }
-
                     SnackbarResult.Dismissed -> {}
                 }
             }
@@ -163,16 +177,33 @@ fun MainPage(
     }
 }
 
-private typealias MenuItem = Pair<Screen, String>
+private data class NavMenuItem(val screen: Screen, val title: String, val icon: ImageVector)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainTopBar() {
+private fun MainTopBar(showTitle: Boolean) {
     val navigator = LocalNavigator.currentOrThrow
     var showDropdownMenu by remember { mutableStateOf(false) }
 
     BasicTopBar(
-        title = stringResource(R.string.app_name),
+        title = if (showTitle) stringResource(R.string.app_name) else "",
+        titleContent = if (showTitle) {
+            {
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
+                            append("USB ")
+                        }
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)) {
+                            append("HID Client")
+                        }
+                    },
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        letterSpacing = (-0.3).sp
+                    )
+                )
+            }
+        } else null,
         actions = {
             DirectInputIconButton()
             IconButton(onClick = { showDropdownMenu = true }) {
@@ -182,40 +213,38 @@ private fun MainTopBar() {
                 )
                 DropdownMenu(
                     expanded = showDropdownMenu,
+                    shape = RoundedCornerShape(CornerLargeIncreased),
                     onDismissRequest = { showDropdownMenu = false }
                 ) {
                     val menuItems = arrayOf(
-                        MenuItem(SettingsScreen(), stringResource(R.string.settings)),
-                        MenuItem(TroubleshootingScreen(), stringResource(R.string.troubleshooting_title)),
-                        MenuItem(HelpScreen(), stringResource(R.string.help)),
-                        MenuItem(InfoScreen(), stringResource(R.string.info))
+                        NavMenuItem(SettingsScreen(), stringResource(R.string.settings), Icons.Outlined.Settings),
+                        NavMenuItem(TroubleshootingScreen(), stringResource(R.string.troubleshooting_title), Icons.Outlined.Build),
+                        NavMenuItem(HelpScreen(), stringResource(R.string.help), Icons.Outlined.HelpOutline),
+                        NavMenuItem(InfoScreen(), stringResource(R.string.info), Icons.Outlined.Info)
                     )
                     for (item in menuItems) {
                         DropdownMenuItem(
-                            text = { Text(item.second) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = item.icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            text = {
+                                Text(
+                                    text = item.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            },
                             onClick = {
-                                // Navigate to screen (safely)
-                                //
-                                // NOTE:
-                                //  Extra code here is necessary because the user can spam click the DropdownMenuItem
-                                //  before the navigation has completed. This would lead to it trying to navigate to the
-                                //  same screen twice. As of right now, Voyager will crash if this happens without you
-                                //  setting unique keys in every Screen. However, even after fixing that, being able
-                                //  to navigate to the same screen multiple times is undesirable. For this reason, I have
-                                //  added extra code that makes sure the given subclass of Screen isn't already present
-                                //  in the navigation stack before we navigate.
-
-                                val thisScreen = item.first
-
-                                // Ensure that the Screen we're about to push isn't already in the navigation stack.
-                                // Iterates in reverse because it's more likely for the duplicate item to be at the end.
+                                val thisScreen = item.screen
                                 for (screen in navigator.items.reversed()) {
                                     if (screen::class == thisScreen::class) {
                                         return@DropdownMenuItem
                                     }
                                 }
-
-                                // Navigate to screen
                                 navigator.push(thisScreen)
                                 showDropdownMenu = false
                             }
@@ -230,28 +259,46 @@ private fun MainTopBar() {
 @Composable
 private fun CreateCharDevicesAlertDialog(showAlert: MutableState<Boolean>, mainViewModel: MainViewModel = viewModel()) {
     AlertDialog(
-        title = { Text("Character device(s) do not exist") },
-        text = { Text("Add HID functions to the default USB gadget? This must be re-done after every reboot.\n\n**The app will not work if you decline**") },
+        shape = RoundedCornerShape(CornerExtraLarge),
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.Usb,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text(
+                text = "Character device(s) do not exist",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                text = "Add HID functions to the default USB gadget? This must be re-done after every reboot.\n\nNote: The app requires these devices to send input to your PC.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
         confirmButton = {
-            TextButton(
-                content = { Text("YES") },
+            Button(
                 onClick = {
                     mainViewModel.createCharacterDevices()
                     showAlert.value = false
                 }
-            )
+            ) {
+                Text("Enable Gadget")
+            }
         },
         dismissButton = {
             TextButton(
-                content = { Text("NO") },
-                onClick = {
-                    showAlert.value = false
-                }
-            )
+                onClick = { showAlert.value = false }
+            ) {
+                Text("Not Now")
+            }
         },
-        onDismissRequest = {
-            // Intentionally blocking dialog dismissal here since I want the user to make a conscious decision
-        }
+        onDismissRequest = {}
     )
 }
 
