@@ -1,1 +1,17 @@
-<p>This Android app allows you your phone to present itself to a connected device as a keyboard and mouse. Since this happens at a very low level, the connected device sees it exactly as a normal keyboard and mouse, meaning you don't need to install any software on the connected computer! For this reason, it will even work if the connected device is in its BIOS/UEFI. Even multimedia keys are supported, meaning you can send volume up/down keys to the connected computer to control media. <b>I strongly recommend using <a href="https://github.com/Julow/Unexpected-Keyboard">Unexpected Keyboard</a> to use special keys such as modifier and function keys</b>, but most functionality will work with any standard Android keyboard.</p><p>Bonus description for nerds: This app adds (and provides a simple UI for you to communicate with) two character devices (<code>/dev/hidg0</code> and <code>/dev/hidg1</code> respectively) by adding HID functions to the default Android USB gadget. If you wanted to, you could just use this app to create the character devices, then communicate solely through some C program, shell script, or whatever else you wanted as long as it had the right permissions to access the character devices and knew how to send proper reports to them. Beware of SELinux policies if you do that though. If anyone is actually doing that, let me know, I'd be glad to help if necessary.</p><p>For more details on setup and usage, please consult the project's Readme.</p>
+<p>This Android app turns your rooted Android device into a hardware USB HID input device for your computer. Because communication happens directly via the Linux USB gadget kernel driver (<code>/dev/hidg*</code>), your computer detects it as genuine plug-and-play USB hardware with zero drivers or client software required on the host!</p>
+
+<p><b>Key Features:</b></p>
+<ul>
+<li><b>Samsung S Pen Drawing Tablet:</b> Use your phone as a high-precision graphics digitizer tablet with full pressure sensitivity (4096 levels), hover tracking, barrel button eraser toggle, customizable hover range, and orientation-aware coordinate mapping. Works seamlessly in Krita, Photoshop, Clip Studio Paint, Blender, OneNote, and any Windows/Linux application.</li>
+<li><b>Windows Precision Touchpad (PTP):</b> Multi-touch touchpad emulation supporting smooth 1 to 5 finger gestures, tap-to-click, pinch-to-zoom, two-finger scrolling, and virtual desktop switching.</li>
+<li><b>USB Keyboard &amp; Mouse:</b> Direct keyboard input, scriptable keystrokes, and standard mouse mode with left/right buttons and scroll wheel. Functions even inside your computer's BIOS/UEFI.</li>
+<li><b>Modern Material 3 Interface:</b> Dynamic color theming, configurable display modes (fullscreen, hide status bar, hide app bar), and customizable digitizer settings.</li>
+</ul>
+
+<p><b>Requirements:</b></p>
+<ul>
+<li>Root access (KernelSU, APatch, or Magisk) to access USB HID gadget character devices.</li>
+<li>Kernel with USB HID Gadget support enabled (standard on most modern Android devices).</li>
+</ul>
+
+<p>For more details on setup, custom scripts, and troubleshooting, visit the project repository on GitHub.</p>

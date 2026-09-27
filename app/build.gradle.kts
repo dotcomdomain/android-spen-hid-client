@@ -9,7 +9,7 @@ plugins {
 android {
     namespace = "me.arianb.usb_hid_client"
     defaultConfig {
-        applicationId = "me.arianb.usb_hid_client"
+        applicationId = "com.dotcomdomain.android_spen_hid_client"
 
         // SDK support
         minSdk = 26
@@ -17,8 +17,8 @@ android {
         compileSdk = 36
 
         // App Versioning
-        versionCode = 311
-        versionName = "v3.1.1-spen"
+        versionCode = 320
+        versionName = "3.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -36,11 +36,27 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val keystoreFile = rootProject.file("release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "android"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "spen_hid"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+            }
+        }
+    }
+
     // Build configuration
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
+            val keystoreFile = rootProject.file("release.keystore")
+            if (keystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
             )

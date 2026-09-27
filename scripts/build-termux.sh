@@ -10,7 +10,8 @@ clang++ -std=c++17 -shared -fPIC \
     -o "$native_dir/libusb_hid_client.so"
 
 cd "$project_dir"
-ANDROID_HOME="$sdk_dir" ./gradlew :app:assembleDebug \
+target_task=${1:-:app:assembleDebug}
+ANDROID_HOME="$sdk_dir" ./gradlew "$target_task" \
     -PtermuxBuild \
     -Pandroid.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2 \
     --no-daemon

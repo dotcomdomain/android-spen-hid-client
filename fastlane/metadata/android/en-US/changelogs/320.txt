@@ -1,0 +1,10 @@
+Features
+- Samsung S Pen graphics tablet digitizer emulation over USB HID (pressure sensitivity, hover tracking, barrel button eraser, orientation-aware mapping, customizable hover range)
+- Windows Precision Touchpad (PTP) multi-touch HID emulation with smooth multi-finger gestures
+- Clean modern UI redesign with Material 3 styling, improved header bar, and layout controls
+
+Other Changes
+- Updated application ID to com.dotcomdomain.android_spen_hid_client
+- Refined settings and hover range calibration controls
+
+See the GitHub release for more details.
