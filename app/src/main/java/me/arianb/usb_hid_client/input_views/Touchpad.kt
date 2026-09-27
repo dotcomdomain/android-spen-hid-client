@@ -1,18 +1,34 @@
 package me.arianb.usb_hid_client.input_views
 
-import android.view.MotionEvent
+import android.content.res.Configuration
+import android.widget.Toast
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Mouse
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,152 +40,187 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.arianb.usb_hid_client.MainViewModel
 import me.arianb.usb_hid_client.R
 import me.arianb.usb_hid_client.input_views.touch_input_handlers.MouseInputHandler
-import me.arianb.usb_hid_client.input_views.touch_input_handlers.TouchInputHandler
 import me.arianb.usb_hid_client.report_senders.pointer_device_senders.MouseSender
 import me.arianb.usb_hid_client.report_senders.pointer_device_senders.PointerDeviceSender
-import me.arianb.usb_hid_client.report_senders.pointer_device_senders.TouchpadSender
+import me.arianb.usb_hid_client.settings.AppPreference
 import me.arianb.usb_hid_client.settings.SettingsViewModel
+import me.arianb.usb_hid_client.ui.theme.CornerLargeIncreased
+import me.arianb.usb_hid_client.ui.theme.ElevationLevel0
+import me.arianb.usb_hid_client.ui.theme.ElevationLevel2
 
 @Composable
 fun Touchpad(
     mainViewModel: MainViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel()
 ) {
     val pointerDeviceSender by mainViewModel.touchpadSender.collectAsState()
     val preferences by settingsViewModel.userPreferencesFlow.collectAsState()
+    val deviceOrientation = LocalConfiguration.current.orientation
+    val isLandscape = deviceOrientation == Configuration.ORIENTATION_LANDSCAPE
+    val fullScreenTouchPadEnabled = preferences.isTouchpadFullscreenInLandscape && isLandscape
 
-    when (val it = pointerDeviceSender) {
-        is TouchpadSender -> {
-            val touchInputHandler = remember(it, preferences.precisionTouchpadSensitivity) {
-                TouchInputHandler(it, preferences.precisionTouchpadSensitivity)
-            }
-
-            TouchpadForTouchpad(touchInputHandler)
-        }
-
-        is MouseSender -> {
-            val mouseInputHandler = remember(it, preferences.touchpadMouseSensitivity) {
-                MouseInputHandler(it, preferences.touchpadMouseSensitivity)
-            }
-
-            TouchpadForMouse(mouseInputHandler)
-        }
+    val currentSpenMode = remember(preferences.spenMode) {
+        runCatching { SpenMode.valueOf(preferences.spenMode) }.getOrDefault(SpenMode.HYBRID)
     }
-}
 
-@Composable
-private fun TouchpadForTouchpad(
-    touchInputHandler: TouchInputHandler,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.SpaceAround,
-    ) {
-        val deviceOrientation = LocalConfiguration.current.orientation
-
-        TouchpadContactSurfaceArea(
-            modifier = Modifier.weight(1f),
-            onTouchEvent = { motionEvent ->
-                touchInputHandler.handleTouchMotionEvent(
-                    motionEvent,
-                    deviceOrientation,
-                )
-            },
-        )
-
-        // NOTE: Touchpad doesn't have on-screen buttons right now, since they're not implemented yet
+    val spenSensitivity = when (currentSpenMode) {
+        SpenMode.HOVER -> 1f
+        SpenMode.MOUSE -> preferences.spenMouseSensitivity
+        SpenMode.HYBRID -> preferences.spenHybridSensitivity
     }
-}
 
-@Composable
-private fun TouchpadForMouse(
-    mouseInputHandler: MouseInputHandler
-) {
+    val spenHoverRange = when (currentSpenMode) {
+        SpenMode.HOVER -> preferences.spenHoverRange
+        SpenMode.HYBRID -> preferences.spenHybridHoverRange
+        SpenMode.MOUSE -> 1f
+    }
+
     Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.SpaceAround,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = if (fullScreenTouchPadEnabled) Arrangement.Top else Arrangement.spacedBy(10.dp)
     ) {
-        TouchpadContactSurfaceArea(
-            modifier = Modifier.weight(1f),
-            onTouchEvent = { motionEvent ->
-                mouseInputHandler.handleTouchEvent(motionEvent)
-            },
-        )
-
-        Row(
+        // Unified Tablet & Touchpad Surface takes all available space
+        Box(
             modifier = Modifier
-                .height(50.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .weight(1f)
+                .fillMaxWidth()
         ) {
+            UnifiedTabletSurface(
+                modifier = Modifier.fillMaxSize(),
+                pointerDeviceSender = pointerDeviceSender,
+                spenMode = currentSpenMode,
+                spenSensitivity = spenSensitivity,
+                hoverRange = spenHoverRange,
+                mouseSensitivity = preferences.touchpadMouseSensitivity,
+                precisionSensitivity = preferences.precisionTouchpadSensitivity,
+                deviceOrientation = deviceOrientation,
+                isFullScreen = fullScreenTouchPadEnabled,
+                onSpenModeChange = { newMode ->
+                    settingsViewModel.setPreference(AppPreference.SpenModePref, newMode.name)
+                }
+            )
 
-            val leftButtonInteractionSource = remember { MutableInteractionSource() }
-            val rightButtonInteractionSource = remember { MutableInteractionSource() }
-
-            val isLeftButtonPressed: Boolean by leftButtonInteractionSource.collectIsPressedAsState()
-            val isRightButtonPressed: Boolean by rightButtonInteractionSource.collectIsPressedAsState()
-
-            val sendButtonStateUpdate: () -> Unit = {
-                mouseInputHandler.sendButtonStateUpdate(
-                    PointerDeviceSender.TouchpadButtonState(
-                        isLeftButtonPressed,
-                        isRightButtonPressed,
-                    )
+            if (fullScreenTouchPadEnabled) {
+                LandscapeFloatingKeyboardButton(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
                 )
             }
+        }
 
-            TouchPadButton(
-                modifier = Modifier.weight(1f),
-                text = "Left Button",
-                interactionSource = leftButtonInteractionSource,
-                onPressed = sendButtonStateUpdate,
-                onReleased = sendButtonStateUpdate
-            )
-            TouchPadButton(
-                modifier = Modifier.weight(1f),
-                text = "Right Button",
-                interactionSource = rightButtonInteractionSource,
-                onPressed = sendButtonStateUpdate,
-                onReleased = sendButtonStateUpdate
-            )
+        // If in relative mouse mode (legacy mouse without precision touchpad),
+        // provide physical click buttons at the bottom for finger touch
+        if (!fullScreenTouchPadEnabled && pointerDeviceSender is MouseSender) {
+            val mouseInputHandler = remember(pointerDeviceSender, preferences.touchpadMouseSensitivity) {
+                MouseInputHandler(pointerDeviceSender as MouseSender, preferences.touchpadMouseSensitivity)
+            }
+            Row(
+                modifier = Modifier
+                    .height(64.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                val leftButtonInteractionSource = remember { MutableInteractionSource() }
+                val rightButtonInteractionSource = remember { MutableInteractionSource() }
+
+                val isLeftButtonPressed: Boolean by leftButtonInteractionSource.collectIsPressedAsState()
+                val isRightButtonPressed: Boolean by rightButtonInteractionSource.collectIsPressedAsState()
+
+                val sendButtonStateUpdate: () -> Unit = {
+                    mouseInputHandler.sendButtonStateUpdate(
+                        PointerDeviceSender.TouchpadButtonState(
+                            isLeftButtonPressed,
+                            isRightButtonPressed,
+                        )
+                    )
+                }
+
+                TouchPadButton(
+                    modifier = Modifier.weight(1f),
+                    text = "Left Button",
+                    interactionSource = leftButtonInteractionSource,
+                    onPressed = sendButtonStateUpdate,
+                    onReleased = sendButtonStateUpdate
+                )
+                TouchPadButton(
+                    modifier = Modifier.weight(1f),
+                    text = "Right Button",
+                    interactionSource = rightButtonInteractionSource,
+                    onPressed = sendButtonStateUpdate,
+                    onReleased = sendButtonStateUpdate
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TouchpadContactSurfaceArea(
-    modifier: Modifier = Modifier,
-    onTouchEvent: (MotionEvent) -> Boolean = { false }
+fun LandscapeFloatingKeyboardButton(
+    modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val localView = LocalView.current
+    val isImeVisible = WindowInsets.isImeVisible
+
     Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInteropFilter { motionEvent: MotionEvent ->
-                onTouchEvent(motionEvent)
+        shape = CircleShape,
+        color = if (isImeVisible) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f),
+        contentColor = if (isImeVisible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(
+            1.dp,
+            if (isImeVisible) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        ),
+        shadowElevation = 4.dp,
+        modifier = modifier
+            .size(46.dp)
+            .pointerInput(isImeVisible) {
+                detectTapGestures(
+                    onTap = {
+                        val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
+                        if (currentlyActive) {
+                            hideDirectInputSoftKeyboard(context, localView)
+                        } else {
+                            Toast.makeText(context, "Double tap to open keyboard", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onDoubleTap = {
+                        val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
+                        if (currentlyActive) {
+                            hideDirectInputSoftKeyboard(context, localView)
+                        } else {
+                            showDirectInputSoftKeyboard(context, localView)
+                        }
+                    }
+                )
             }
-            .then(modifier),
-        color = MaterialTheme.colorScheme.background,
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
     ) {
-        Text(
-            text = stringResource(R.string.touchpad_label),
-            modifier = Modifier.wrapContentHeight(Alignment.CenterVertically),
-            textAlign = TextAlign.Center
-        )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.keyboard),
+                contentDescription = stringResource(R.string.direct_input),
+                tint = if (isImeVisible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(24.dp)
+            )
+        }
     }
 }
 
@@ -181,9 +232,9 @@ private fun TouchPadButton(
     onPressed: () -> Unit = {},
     onReleased: () -> Unit = {},
 ) {
-    // Haptic feedback on press and release
     val hapticFeedback = LocalHapticFeedback.current
     val isPressed: Boolean by interactionSource.collectIsPressedAsState()
+
     LaunchedEffect(isPressed) {
         if (isPressed) {
             hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
@@ -194,20 +245,53 @@ private fun TouchPadButton(
         }
     }
 
+    val buttonColor by animateColorAsState(
+        targetValue = if (isPressed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium),
+        label = "btnColor"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (isPressed) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        label = "btnContentColor"
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (isPressed) ElevationLevel0 else ElevationLevel2,
+        label = "btnElevation"
+    )
+
     Surface(
-        // Passing empty `onClick` just because the overload that takes `interactionSource` requires one
         onClick = {},
         modifier = Modifier
             .fillMaxSize()
             .then(modifier),
-        color = MaterialTheme.colorScheme.background,
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+        shape = RoundedCornerShape(CornerLargeIncreased),
+        color = buttonColor,
+        border = BorderStroke(
+            1.dp,
+            if (isPressed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ),
+        shadowElevation = elevation,
         interactionSource = interactionSource,
     ) {
-        Text(
-            text,
-            modifier = Modifier.wrapContentSize(),
-            textAlign = TextAlign.Center,
-        )
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Mouse,
+                contentDescription = null,
+                tint = contentColor.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = contentColor,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }

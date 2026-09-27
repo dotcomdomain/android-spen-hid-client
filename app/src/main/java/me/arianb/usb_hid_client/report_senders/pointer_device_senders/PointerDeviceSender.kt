@@ -11,9 +11,19 @@ sealed class PointerDeviceSender(
     touchpadDevicePath
 ) {
     fun sendRelativeMouseReport(x: Int, y: Int, buttons: TouchpadButtonState) {
+        require(x in -127..127 && y in -127..127)
         addReportToChannel(byteArrayOf(1, buttons.toByte(), x.toByte(), y.toByte()) + ByteArray(5))
     }
 
+    fun sendAbsoluteMouseReport(x: Int, y: Int, buttons: TouchpadButtonState) {
+        val clampedX = x.coerceIn(0, 32767)
+        val clampedY = y.coerceIn(0, 32767)
+        addReportToChannel(byteArrayOf(
+            8, buttons.toByte(),
+            clampedX.toByte(), (clampedX ushr 8).toByte(),
+            clampedY.toByte(), (clampedY ushr 8).toByte()
+        ))
+    }
     abstract fun send(
         contactID: Byte,
         tipSwitch: Boolean,

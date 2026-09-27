@@ -1,22 +1,36 @@
 package me.arianb.usb_hid_client.input_views
 
+import android.app.Activity
 import android.content.Context
 import android.text.InputType
 import android.util.AttributeSet
 import android.view.KeyEvent
+import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.widget.AppCompatEditText
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.viewinterop.AndroidViewBinding
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.arianb.usb_hid_client.MainViewModel
@@ -93,17 +107,71 @@ fun DirectInput(
     )
 }
 
+fun isKeyboardActive(context: Context, view: View): Boolean {
+    val rootInsets = ViewCompat.getRootWindowInsets(view)
+    if (rootInsets != null && rootInsets.isVisible(WindowInsetsCompat.Type.ime())) {
+        return true
+    }
+    if (rootInsets != null && rootInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom > 0) {
+        return true
+    }
+    val etDirectInput = view.rootView.findViewById<DirectInputKeyboardView>(R.id.etDirectInput)
+        ?: view.findViewById(R.id.etDirectInput)
+    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+    return etDirectInput?.isFocused == true && imm?.isAcceptingText == true
+}
+
+fun showDirectInputSoftKeyboard(context: Context, view: View) {
+    val etDirectInput = view.rootView.findViewById<DirectInputKeyboardView>(R.id.etDirectInput)
+        ?: view.findViewById(R.id.etDirectInput)
+    if (etDirectInput != null) {
+        etDirectInput.isFocusable = true
+        etDirectInput.isFocusableInTouchMode = true
+        etDirectInput.requestFocus()
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.showSoftInput(etDirectInput, 0)
+        val window = (view.context as? Activity)?.window
+        if (window != null) {
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller.show(WindowInsetsCompat.Type.ime())
+        }
+    }
+}
+
+fun hideDirectInputSoftKeyboard(context: Context, view: View) {
+    val etDirectInput = view.rootView.findViewById<DirectInputKeyboardView>(R.id.etDirectInput)
+        ?: view.findViewById(R.id.etDirectInput)
+    val targetView = etDirectInput ?: view
+    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+    imm?.hideSoftInputFromWindow(targetView.windowToken, 0)
+    val window = (view.context as? Activity)?.window
+    if (window != null) {
+        val controller = WindowCompat.getInsetsController(window, view)
+        controller.hide(WindowInsetsCompat.Type.ime())
+    }
+    etDirectInput?.clearFocus()
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DirectInputIconButton() {
     val localView = LocalView.current
     val context = LocalContext.current
+    val isImeVisible = WindowInsets.isImeVisible
 
-    IconButton(
+    FilledTonalIconButton(
+        modifier = Modifier.padding(end = 4.dp),
+        colors = IconButtonDefaults.filledTonalIconButtonColors(
+            containerColor = if (isImeVisible) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = if (isImeVisible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
+        ),
         onClick = {
-            val etDirectInput = localView.findViewById<DirectInputKeyboardView>(R.id.etDirectInput)
-            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            etDirectInput.requestFocus()
-            imm.showSoftInput(etDirectInput, 0)
+            val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
+            if (currentlyActive) {
+                hideDirectInputSoftKeyboard(context, localView)
+            } else {
+                showDirectInputSoftKeyboard(context, localView)
+            }
         }
     ) {
         Icon(

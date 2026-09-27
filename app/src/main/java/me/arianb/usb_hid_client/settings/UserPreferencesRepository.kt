@@ -66,6 +66,16 @@ sealed class AppPreference(val preference: PreferenceKey<*>) {
         FloatPreferenceKey("touchpad_mouse_sensitivity", 1f)
     data object PrecisionTouchpadSensitivity :
         FloatPreferenceKey("precision_touchpad_sensitivity", 1f)
+    data object SpenHoverRange :
+        FloatPreferenceKey("spen_hover_range", 1f)
+    data object SpenHybridHoverRange :
+        FloatPreferenceKey("spen_hybrid_hover_range", 1f)
+    data object SpenMouseSensitivity :
+        FloatPreferenceKey("spen_mouse_sensitivity", 1f)
+    data object SpenHybridSensitivity :
+        FloatPreferenceKey("spen_hybrid_sensitivity", 1f)
+    data object SpenModePref :
+        StringPreferenceKey("spen_mode", "HYBRID")
 
     data object EnableScriptingSupport: BooleanPreferenceKey("enable_scripting_support", false)
 }
@@ -104,6 +114,11 @@ data class UserPreferences(
     val enablePrecisionTouchpad: Boolean,
     val touchpadMouseSensitivity: Float,
     val precisionTouchpadSensitivity: Float,
+    val spenHoverRange: Float,
+    val spenHybridHoverRange: Float,
+    val spenMouseSensitivity: Float,
+    val spenHybridSensitivity: Float,
+    val spenMode: String,
     val enableScriptingSupport: Boolean,
 )
 
@@ -128,6 +143,16 @@ data class GadgetUserPreferences(
 
 class UserPreferencesRepository private constructor(application: Application) {
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
+
+    init {
+        // Preserve the old shared range for both modes when upgrading to separate controls.
+        if (!sharedPreferences.contains(AppPreference.SpenHybridHoverRange.key)) {
+            AppPreference.SpenHybridHoverRange.setValue(
+                sharedPreferences,
+                AppPreference.SpenHoverRange.getValue(sharedPreferences)
+            )
+        }
+    }
 
     private val _userPreferencesFlow = MutableStateFlow(userPreferences)
     val userPreferencesFlow: StateFlow<UserPreferences> = _userPreferencesFlow
@@ -155,6 +180,11 @@ class UserPreferencesRepository private constructor(application: Application) {
                 enablePrecisionTouchpad = AppPreference.EnablePrecisionTouchpad.getValue(),
                 touchpadMouseSensitivity = AppPreference.TouchpadMouseSensitivity.getValue(),
                 precisionTouchpadSensitivity = AppPreference.PrecisionTouchpadSensitivity.getValue(),
+                spenHoverRange = AppPreference.SpenHoverRange.getValue(),
+                spenHybridHoverRange = AppPreference.SpenHybridHoverRange.getValue(),
+                spenMouseSensitivity = AppPreference.SpenMouseSensitivity.getValue(),
+                spenHybridSensitivity = AppPreference.SpenHybridSensitivity.getValue(),
+                spenMode = AppPreference.SpenModePref.getValue(),
                 enableScriptingSupport = AppPreference.EnableScriptingSupport.getValue(),
             )
         }
