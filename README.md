@@ -1,4 +1,4 @@
-# S Pen Drawing Tablet
+# Android S Pen HID Client
 
 Use a rooted Android phone as a USB keyboard, mouse, Windows Precision Touchpad, or S Pen input device. The host computer sees standard USB HID devices, so it does not need a companion program.
 
