@@ -32,13 +32,6 @@ open class TouchpadSender(
         contactCount: Byte,
         touchpadButtonState: TouchpadButtonState
     ): ByteArray {
-        // Only send non-zero contact count in the report of contact ID 0 as per the spec
-        val realContactCount: Byte = if (contactID.toInt() == 0) {
-            contactCount
-        } else {
-            0
-        }
-
         val secondByteBitSet = BitSet(8).apply {
             val isConfident = true
             set(0, isConfident)
@@ -70,7 +63,7 @@ open class TouchpadSender(
             y.toHighByte(),
             scanTime.toLowByte(),
             scanTime.toHighByte(),
-            realContactCount,
+            contactCount,
             buttonByte,
             vendorUsageLowByte,
             vendorUsageHighByte

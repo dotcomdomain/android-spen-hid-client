@@ -1,145 +1,176 @@
 package me.arianb.usb_hid_client.input_views.touch_input_handlers
 
-import android.content.res.Configuration
-import android.os.Build
-import android.view.InputDevice
 import android.view.MotionEvent
 import me.arianb.usb_hid_client.report_senders.pointer_device_senders.TouchpadSender
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 class TouchInputHandler(
-    private val touchpadSender: TouchpadSender
+    private val touchpadSender: TouchpadSender,
+    private val sensitivity: Float = 1f
 ) : PointerDeviceInputHandler() {
     private var currentScanTime: UShort = getScanTime()
+    private val lastRawPositions = mutableMapOf<Int, Pair<Int, Int>>()
+    private val scaledPositions = mutableMapOf<Int, Pair<Float, Float>>()
 
     fun handleTouchMotionEvent(
         motionEvent: MotionEvent,
-        deviceOrientation: Int,
+        surfaceWidth: Int,
+        surfaceHeight: Int,
     ): Boolean {
-        val (pointerID, pointerX, pointerY) = getPointerTriple(
-            motionEvent,
-            motionEvent.actionIndex,
-            deviceOrientation
-        )
-
-        // Scan time is reset when pointer 0 is sent
-        if (pointerID == 0) {
-            currentScanTime = getScanTime()
-        }
-
-        val pointerCount = motionEvent.pointerCount
-
-        val handlePointerDown = {
-            touchpadSender.send(
-                pointerID,
-                true,
-                pointerX, pointerY,
-                currentScanTime,
-                pointerCount,
-            )
-        }
-        val handlePointerUp = {
-            touchpadSender.send(
-                pointerID,
-                false,
-                pointerX,
-                pointerY,
-                currentScanTime,
-                pointerCount,
-            )
+        currentScanTime = getScanTime()
+        val allPointerIndices = (0 until motionEvent.pointerCount).toList()
+        if (motionEvent.actionMasked == MotionEvent.ACTION_DOWN) {
+            lastRawPositions.clear()
+            scaledPositions.clear()
         }
 
         when (val action = motionEvent.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                Timber.v("Action Down")
-                handlePointerDown()
-            }
-
-            MotionEvent.ACTION_POINTER_DOWN -> {
-                Timber.v("Action Pointer Down")
-                handlePointerDown()
-            }
-
-            MotionEvent.ACTION_UP -> {
-                Timber.v("Action Up")
-                handlePointerUp()
-            }
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_POINTER_DOWN,
+            MotionEvent.ACTION_MOVE -> sendFrame(
+                motionEvent = motionEvent,
+                pointerIndices = allPointerIndices,
+                surfaceWidth = surfaceWidth,
+                surfaceHeight = surfaceHeight,
+                tipSwitchForIndex = { true }
+            )
 
             MotionEvent.ACTION_POINTER_UP -> {
-                Timber.v("Action Pointer Up")
-                handlePointerUp()
-            }
+                val liftedIndex = motionEvent.actionIndex
+                sendFrame(
+                    motionEvent = motionEvent,
+                    pointerIndices = allPointerIndices,
+                    surfaceWidth = surfaceWidth,
+                    surfaceHeight = surfaceHeight,
+                    tipSwitchForIndex = { it != liftedIndex }
+                )
 
-            MotionEvent.ACTION_CANCEL -> {
-                Timber.v("Action Cancel")
-                handlePointerUp()
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                Timber.v("Action Move")
-                for (index in 0..<pointerCount) {
-                    val (thisID, thisX, thisY) = getPointerTriple(
-                        motionEvent,
-                        index,
-                        deviceOrientation
+                // Android may not emit another event if the remaining fingers stay still. Send the
+                // next complete frame now so Windows stops expecting the lifted contact.
+                val remainingIndices = allPointerIndices.filter { it != liftedIndex }
+                if (remainingIndices.isNotEmpty()) {
+                    advanceScanTime()
+                    sendFrame(
+                        motionEvent = motionEvent,
+                        pointerIndices = remainingIndices,
+                        surfaceWidth = surfaceWidth,
+                        surfaceHeight = surfaceHeight,
+                        tipSwitchForIndex = { true }
                     )
-
-                    touchpadSender.send(thisID, true, thisX, thisY, currentScanTime, pointerCount)
                 }
+                val liftedPointerId = motionEvent.getPointerId(liftedIndex)
+                lastRawPositions.remove(liftedPointerId)
+                scaledPositions.remove(liftedPointerId)
             }
+
+            MotionEvent.ACTION_UP -> sendFrame(
+                motionEvent = motionEvent,
+                pointerIndices = allPointerIndices,
+                surfaceWidth = surfaceWidth,
+                surfaceHeight = surfaceHeight,
+                tipSwitchForIndex = { false }
+            )
+
+            MotionEvent.ACTION_CANCEL -> sendFrame(
+                motionEvent = motionEvent,
+                pointerIndices = allPointerIndices,
+                surfaceWidth = surfaceWidth,
+                surfaceHeight = surfaceHeight,
+                tipSwitchForIndex = { false }
+            )
 
             else -> {
                 Timber.w("UNHANDLED ACTION CONSTANT: %s", action)
             }
         }
 
+        if (motionEvent.actionMasked == MotionEvent.ACTION_UP ||
+            motionEvent.actionMasked == MotionEvent.ACTION_CANCEL) {
+            lastRawPositions.clear()
+            scaledPositions.clear()
+        }
+
         return true
     }
 
+    private fun sendFrame(
+        motionEvent: MotionEvent,
+        pointerIndices: List<Int>,
+        surfaceWidth: Int,
+        surfaceHeight: Int,
+        tipSwitchForIndex: (Int) -> Boolean,
+    ) {
+        pointerIndices.forEachIndexed { reportIndex, pointerIndex ->
+            val (pointerID, rawPointerX, rawPointerY) = getPointerTriple(
+                motionEvent,
+                pointerIndex,
+                surfaceWidth,
+                surfaceHeight
+            )
+            val previousRaw = lastRawPositions[pointerID]
+            val previousScaled = scaledPositions[pointerID]
+            val (logicalMaxX, logicalMaxY) = logicalBounds()
+            val scaledPosition = if (previousRaw == null || previousScaled == null) {
+                Pair(rawPointerX.toFloat(), rawPointerY.toFloat())
+            } else {
+                Pair(
+                    (previousScaled.first + (rawPointerX - previousRaw.first) * sensitivity)
+                        .coerceIn(0f, logicalMaxX.toFloat()),
+                    (previousScaled.second + (rawPointerY - previousRaw.second) * sensitivity)
+                        .coerceIn(0f, logicalMaxY.toFloat())
+                )
+            }
+            lastRawPositions[pointerID] = Pair(rawPointerX, rawPointerY)
+            scaledPositions[pointerID] = scaledPosition
+            val pointerX = scaledPosition.first.roundToInt()
+            val pointerY = scaledPosition.second.roundToInt()
+
+            // Single-finger hybrid reporting puts the total count in the first report in a frame.
+            // Every following contact uses zero and shares the same scan time.
+            val frameContactCount = if (reportIndex == 0) pointerIndices.size else 0
+            touchpadSender.send(
+                pointerID,
+                tipSwitchForIndex(pointerIndex),
+                pointerX,
+                pointerY,
+                currentScanTime,
+                frameContactCount,
+            )
+        }
+    }
+
+    private fun advanceScanTime() {
+        val nextScanTime = getScanTime()
+        currentScanTime = if (nextScanTime == currentScanTime) {
+            ((currentScanTime.toUInt() + 1u) and 0xffffu).toUShort()
+        } else {
+            nextScanTime
+        }
+    }
+
     private companion object {
+        // The square descriptor leaves enough coordinate space for either screen orientation.
+        private fun logicalBounds(): Pair<Int, Int> = Pair(12000, 12000)
+
         private fun getPointerTriple(
             motionEvent: MotionEvent,
             pointerIndex: Int,
-            deviceOrientation: Int
+            surfaceWidth: Int,
+            surfaceHeight: Int
         ): Triple<Int, Int, Int> {
             val pointerID = motionEvent.getPointerId(pointerIndex)
-
-            val (rawPointerX, rawPointerY) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                Pair(motionEvent.getRawX(pointerIndex), motionEvent.getRawY(pointerIndex))
-            } else {
-                Pair(motionEvent.getX(pointerIndex), motionEvent.getY(pointerIndex))
-            }
-
-            // NOTE: MotionEvent has a bunch of properties (and properties of those properties) which are platform types.
-            //       I'm writing this note to be explicit about the fact that the following code should be treated cautiously so
-            //       as to not cause NPEs.
-            // --- start of unsafe code ---
-            val device: InputDevice? = motionEvent.device
-
-            // If null, just use some hardcoded safe-ish values
-            val xMax: Float = device?.getMotionRange(MotionEvent.AXIS_X)?.max ?: 1500f
-            val yMax: Float = device?.getMotionRange(MotionEvent.AXIS_Y)?.max ?: 3000f
-            // --- end of unsafe code ---
-
-            // The underlying touchpad report descriptor says it's physically "portrait" (taller than it is wide, like a phone).
-            // If the device itself is actually wider than it is tall ("landscape"), we need to know, so we can adjust the math
-            // so that the speed of movement across the physical screen is more accurately relayed to the device. Otherwise,
-            // a long swipe from the bottom to the top of a tall screen would be normal speed while portrait, but cause
-            // a very slow swipe when the device is turned landscape.
-            //
-            // Note:
-            //  We cannot just swap x and y values to fix this problem, because the target device needs to know what physical
-            //  directions the user is inputting. Otherwise, things like an upward swipe gesture, might be registered as a swipe
-            //  to the right or left instead.
-            //
-            // If orientation is ORIENTATION_PORTRAIT or ORIENTATION_UNKNOWN or just anything other than landscape, treat it
-            // as being in portrait.
-            val isPortrait = deviceOrientation != Configuration.ORIENTATION_LANDSCAPE
+            val localPointerX = motionEvent.getX(pointerIndex)
+            val localPointerY = motionEvent.getY(pointerIndex)
+            val logicalMax = logicalBounds()
 
             val (pointerX, pointerY) = adjustRange(
-                point = Pair(rawPointerX.toInt(), rawPointerY.toInt()),
-                max = Pair(xMax, yMax),
-                isPortrait
+                point = Pair(localPointerX, localPointerY),
+                surfaceMax = Pair(
+                    (surfaceWidth - 1).coerceAtLeast(1).toFloat(),
+                    (surfaceHeight - 1).coerceAtLeast(1).toFloat()
+                ),
+                logicalMax = logicalMax
             )
 
             val pointerTriple = Triple(pointerID, pointerX, pointerY)
@@ -149,33 +180,31 @@ class TouchInputHandler(
             return pointerTriple
         }
 
-        // "Stretches" the values of the points to use up the entire logical range.
-        private fun adjustRange(point: Pair<Int, Int>, max: Pair<Float, Float>, isPortrait: Boolean): Pair<Int, Int> {
+        // Maps surface coordinates into the ranges and physical units declared by the descriptor.
+        private fun adjustRange(
+            point: Pair<Float, Float>,
+            surfaceMax: Pair<Float, Float>,
+            logicalMax: Pair<Int, Int>
+        ): Pair<Int, Int> {
             Timber.d("--- adjustRange ---")
             Timber.d("Input point: %s", point)
-            Timber.d("isPortrait: %b", isPortrait)
-            Timber.d("DEVICE COORDINATE MAX = (%f, %f)", max.first, max.second)
+            Timber.d("SURFACE COORDINATE MAX = (%f, %f)", surfaceMax.first, surfaceMax.second)
 
-            val (logicalMaxX, logicalMaxY) = if (isPortrait) {
-                // FIXME:
-                //  this is not wide enough for the user to be able to easily click the "left" half of the touchpad
-                //  for the OS to interpret as a left-click. Or more specifically, it is too small a width to be comfortable.
-                Pair(2500, 5000)
-            } else {
-                Pair(5000, 2500)
-            }
+            val (logicalMaxX, logicalMaxY) = logicalMax
+            val shortSurfaceEdge = minOf(surfaceMax.first, surfaceMax.second)
+            val physicalUnitsPerPixel = REFERENCE_SHORT_EDGE_PHYSICAL / shortSurfaceEdge
+            val xRange = (physicalUnitsPerPixel * surfaceMax.first * logicalMaxX / PHYSICAL_MAX_X)
+                .coerceAtMost(logicalMaxX.toFloat())
+            val yRange = (physicalUnitsPerPixel * surfaceMax.second * logicalMaxY / PHYSICAL_MAX_Y)
+                .coerceAtMost(logicalMaxY.toFloat())
+            val xMin = (logicalMaxX - xRange) / 2f
+            val yMin = (logicalMaxY - yRange) / 2f
+            val xRatio = xRange / surfaceMax.first
+            val yRatio = yRange / surfaceMax.second
+            Timber.d("LOGICAL RANGE = (%f..%f, %f..%f)", xMin, xMin + xRange, yMin, yMin + yRange)
 
-            val (pointerMaxX, pointerMaxY) = if (isPortrait) {
-                max
-            } else {
-                Pair(max.second, max.first)
-            }
-
-            val xRatio: Float = logicalMaxX / pointerMaxX
-            val yRatio: Float = logicalMaxY / pointerMaxY
-
-            val adjustedX = (point.first * xRatio).toInt()
-            val adjustedY = (point.second * yRatio).toInt()
+            val adjustedX = (xMin + point.first * xRatio).toInt()
+            val adjustedY = (yMin + point.second * yRatio).toInt()
 
             // This will probably never actually be necessary, but might as well do it just in case.
             val finalX = adjustedX.coerceIn(0, logicalMaxX)
@@ -195,5 +224,9 @@ class TouchInputHandler(
 
             return hundredMicroTime.toUShort()
         }
+
+        private const val PHYSICAL_MAX_X = 12000f
+        private const val PHYSICAL_MAX_Y = 12000f
+        private const val REFERENCE_SHORT_EDGE_PHYSICAL = 5000f
     }
 }
