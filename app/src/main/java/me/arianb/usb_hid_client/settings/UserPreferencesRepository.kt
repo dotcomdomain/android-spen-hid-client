@@ -35,6 +35,8 @@ sealed class AppPreference(val preference: PreferenceKey<*>) {
     )
 
     data object DynamicColorKey : BooleanPreferenceKey("dynamic_color", false)
+    data object HideStatusBar : BooleanPreferenceKey("hide_status_bar", false)
+    data object HideAppTitle : BooleanPreferenceKey("hide_app_title", false)
     data object LoopbackMode : BooleanPreferenceKey("loopback_mode", false)
     data object ExperimentalMode : BooleanPreferenceKey("experimental_mode", false)
     data object TouchpadFullscreenInLandscape : BooleanPreferenceKey("touchpad_fullscreen_in_landscape", false)
@@ -62,6 +64,20 @@ sealed class AppPreference(val preference: PreferenceKey<*>) {
         BooleanPreferenceKey("disable_gadget_functions_during_config", false)
 
     data object EnablePrecisionTouchpad : BooleanPreferenceKey("enable_precision_touchpad", false)
+    data object TouchpadMouseSensitivity :
+        FloatPreferenceKey("touchpad_mouse_sensitivity", 1f)
+    data object PrecisionTouchpadSensitivity :
+        FloatPreferenceKey("precision_touchpad_sensitivity", 1f)
+    data object SpenHoverRange :
+        FloatPreferenceKey("spen_hover_range", 1f)
+    data object SpenHybridHoverRange :
+        FloatPreferenceKey("spen_hybrid_hover_range", 1f)
+    data object SpenMouseSensitivity :
+        FloatPreferenceKey("spen_mouse_sensitivity", 1f)
+    data object SpenHybridSensitivity :
+        FloatPreferenceKey("spen_hybrid_sensitivity", 1f)
+    data object SpenModePref :
+        StringPreferenceKey("spen_mode", "HYBRID")
 
     data object EnableScriptingSupport: BooleanPreferenceKey("enable_scripting_support", false)
 }
@@ -89,6 +105,8 @@ data class UserPreferences(
     val isVolumeButtonPassthroughEnabled: Boolean,
     val appTheme: AppTheme,
     val isDynamicColorEnabled: Boolean,
+    val hideStatusBar: Boolean,
+    val hideAppTitle: Boolean,
     val isLoopbackModeEnabled: Boolean,
     val isTouchpadFullscreenInLandscape: Boolean,
     val isExperimentalModeEnabled: Boolean,
@@ -98,6 +116,13 @@ data class UserPreferences(
     val createNewGadgetForFunctions: Boolean,
     val disableGadgetFunctionsDuringConfiguration: Boolean,
     val enablePrecisionTouchpad: Boolean,
+    val touchpadMouseSensitivity: Float,
+    val precisionTouchpadSensitivity: Float,
+    val spenHoverRange: Float,
+    val spenHybridHoverRange: Float,
+    val spenMouseSensitivity: Float,
+    val spenHybridSensitivity: Float,
+    val spenMode: String,
     val enableScriptingSupport: Boolean,
 )
 
@@ -123,6 +148,16 @@ data class GadgetUserPreferences(
 class UserPreferencesRepository private constructor(application: Application) {
     private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(application)
 
+    init {
+        // Preserve the old shared range for both modes when upgrading to separate controls.
+        if (!sharedPreferences.contains(AppPreference.SpenHybridHoverRange.key)) {
+            AppPreference.SpenHybridHoverRange.setValue(
+                sharedPreferences,
+                AppPreference.SpenHoverRange.getValue(sharedPreferences)
+            )
+        }
+    }
+
     private val _userPreferencesFlow = MutableStateFlow(userPreferences)
     val userPreferencesFlow: StateFlow<UserPreferences> = _userPreferencesFlow
 
@@ -138,6 +173,8 @@ class UserPreferencesRepository private constructor(application: Application) {
                 isVolumeButtonPassthroughEnabled = AppPreference.VolumeButtonPassthroughKey.getValue(),
                 appTheme = AppPreference.AppThemeKey.getValue(),
                 isDynamicColorEnabled = AppPreference.DynamicColorKey.getValue(),
+                hideStatusBar = AppPreference.HideStatusBar.getValue(),
+                hideAppTitle = AppPreference.HideAppTitle.getValue(),
                 isLoopbackModeEnabled = AppPreference.LoopbackMode.getValue(),
                 isTouchpadFullscreenInLandscape = AppPreference.TouchpadFullscreenInLandscape.getValue(),
                 isExperimentalModeEnabled = AppPreference.ExperimentalMode.getValue(),
@@ -147,6 +184,13 @@ class UserPreferencesRepository private constructor(application: Application) {
                 createNewGadgetForFunctions = AppPreference.CreateNewGadgetForFunctions.getValue(),
                 disableGadgetFunctionsDuringConfiguration = AppPreference.DisableGadgetFunctionsDuringConfiguration.getValue(),
                 enablePrecisionTouchpad = AppPreference.EnablePrecisionTouchpad.getValue(),
+                touchpadMouseSensitivity = AppPreference.TouchpadMouseSensitivity.getValue(),
+                precisionTouchpadSensitivity = AppPreference.PrecisionTouchpadSensitivity.getValue(),
+                spenHoverRange = AppPreference.SpenHoverRange.getValue(),
+                spenHybridHoverRange = AppPreference.SpenHybridHoverRange.getValue(),
+                spenMouseSensitivity = AppPreference.SpenMouseSensitivity.getValue(),
+                spenHybridSensitivity = AppPreference.SpenHybridSensitivity.getValue(),
+                spenMode = AppPreference.SpenModePref.getValue(),
                 enableScriptingSupport = AppPreference.EnableScriptingSupport.getValue(),
             )
         }

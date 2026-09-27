@@ -1,7 +1,6 @@
 package me.arianb.usb_hid_client.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -14,20 +13,28 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
 import me.arianb.usb_hid_client.R
 import me.arianb.usb_hid_client.settings.AppSettings.AppThemePreference
-import me.arianb.usb_hid_client.settings.AppSettings.ClearManualInputOnSend
 import me.arianb.usb_hid_client.settings.AppSettings.DynamicColors
 import me.arianb.usb_hid_client.settings.AppSettings.EnablePrecisionTouchpad
-import me.arianb.usb_hid_client.settings.AppSettings.EnableScriptingSupport
 import me.arianb.usb_hid_client.settings.AppSettings.ExperimentalMode
 import me.arianb.usb_hid_client.settings.AppSettings.FullyDisableGadgetDuringConfiguration
+import me.arianb.usb_hid_client.settings.AppSettings.HideStatusBar
+import me.arianb.usb_hid_client.settings.AppSettings.HideAppTitle
 import me.arianb.usb_hid_client.settings.AppSettings.KeyboardCharacterDevicePath
 import me.arianb.usb_hid_client.settings.AppSettings.MediaKeyPassthrough
 import me.arianb.usb_hid_client.settings.AppSettings.PreferenceCategory
+import me.arianb.usb_hid_client.settings.AppSettings.PreferenceDivider
+import me.arianb.usb_hid_client.settings.AppSettings.PrecisionTouchpadSensitivity
+import me.arianb.usb_hid_client.settings.AppSettings.SpenHoverRange
+import me.arianb.usb_hid_client.settings.AppSettings.SpenHybridHoverRange
+import me.arianb.usb_hid_client.settings.AppSettings.SpenHybridSensitivity
+import me.arianb.usb_hid_client.settings.AppSettings.SpenMouseSensitivity
 import me.arianb.usb_hid_client.settings.AppSettings.TouchpadCharacterDevicePath
 import me.arianb.usb_hid_client.settings.AppSettings.TouchpadFullscreenInLandscape
 import me.arianb.usb_hid_client.settings.AppSettings.TouchpadLoopbackMode
+import me.arianb.usb_hid_client.settings.AppSettings.TouchpadMouseSensitivity
 import me.arianb.usb_hid_client.settings.AppSettings.UsbGadgetPath
 import me.arianb.usb_hid_client.ui.theme.PaddingNormal
+import me.arianb.usb_hid_client.ui.theme.PaddingSmall
 import me.arianb.usb_hid_client.ui.theme.isDynamicColorAvailable
 import me.arianb.usb_hid_client.ui.utils.BasicPage
 import me.arianb.usb_hid_client.ui.utils.DarkLightModePreviews
@@ -44,12 +51,10 @@ class SettingsScreen : Screen {
 
 @Composable
 fun SettingsPage() {
-    val padding = PaddingNormal
-
     BasicPage(
         topBar = { SettingsTopBar() },
         horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(padding, Alignment.Top),
+        verticalArrangement = Arrangement.spacedBy(PaddingSmall, Alignment.Top),
         scrollable = true
     ) {
         PreferenceCategory(
@@ -58,30 +63,52 @@ fun SettingsPage() {
             AppThemePreference()
 
             if (isDynamicColorAvailable()) {
+                PreferenceDivider()
                 DynamicColors()
             }
+
+            PreferenceDivider()
+            HideStatusBar()
+            PreferenceDivider()
+            HideAppTitle()
         }
+
         PreferenceCategory(
             title = stringResource(R.string.direct_input),
         ) {
             MediaKeyPassthrough()
         }
-        PreferenceCategory(
-            title = stringResource(R.string.manual_input),
-        ) {
-            ClearManualInputOnSend()
-            EnableScriptingSupport()
-        }
+
+
         PreferenceCategory(
             title = stringResource(R.string.touchpad_label),
         ) {
             TouchpadFullscreenInLandscape()
+            PreferenceDivider()
             TouchpadLoopbackMode()
+            PreferenceDivider()
             EnablePrecisionTouchpad()
         }
 
-        // only set `showDivider = false` for the last category.
-        // haven't found a nice way to do that implicitly yet.
+        PreferenceCategory(
+            title = stringResource(R.string.touchpad_sensitivity_header),
+        ) {
+            TouchpadMouseSensitivity()
+            PreferenceDivider()
+            PrecisionTouchpadSensitivity()
+        }
+
+        PreferenceCategory(
+            title = stringResource(R.string.spen_settings_header),
+        ) {
+            SpenHoverRange()
+            PreferenceDivider()
+            SpenHybridHoverRange()
+            PreferenceDivider()
+            SpenMouseSensitivity()
+            PreferenceDivider()
+            SpenHybridSensitivity()
+        }
 
         PreferenceCategory(
             title = stringResource(R.string.misc_header),
@@ -89,14 +116,18 @@ fun SettingsPage() {
         ) {
             ExperimentalMode()
         }
+
         Experimental {
             PreferenceCategory(
                 title = stringResource(R.string.device_specific_quirks_header),
                 showDivider = false
             ) {
                 FullyDisableGadgetDuringConfiguration()
+                PreferenceDivider()
                 UsbGadgetPath()
+                PreferenceDivider()
                 KeyboardCharacterDevicePath()
+                PreferenceDivider()
                 TouchpadCharacterDevicePath()
             }
         }
@@ -111,7 +142,6 @@ private fun SettingsTopBar() {
     )
 }
 
-// Specializations of the generic preference composable "helper" functions
 private object AppSettings {
     @Composable
     fun PreferenceCategory(
@@ -119,14 +149,17 @@ private object AppSettings {
         showDivider: Boolean = true,
         preferences: @Composable (() -> Unit)
     ) {
-        val paddingModifier = Modifier.padding(horizontal = PaddingNormal)
-
-        PreferenceCategory(
+        me.arianb.usb_hid_client.settings.PreferenceCategory(
             title = title,
-            modifier = paddingModifier,
+            modifier = Modifier,
             showDivider = showDivider,
             preferences = preferences,
         )
+    }
+
+    @Composable
+    fun PreferenceDivider() {
+        me.arianb.usb_hid_client.settings.PreferenceDivider()
     }
 
     @Composable
@@ -167,6 +200,24 @@ private object AppSettings {
     }
 
     @Composable
+    fun HideStatusBar() {
+        SwitchPreference(
+            title = stringResource(R.string.hide_status_bar_title),
+            summary = stringResource(R.string.hide_status_bar_summary),
+            preference = AppPreference.HideStatusBar
+        )
+    }
+
+    @Composable
+    fun HideAppTitle() {
+        SwitchPreference(
+            title = stringResource(R.string.hide_app_title_title),
+            summary = stringResource(R.string.hide_app_title_summary),
+            preference = AppPreference.HideAppTitle
+        )
+    }
+
+    @Composable
     fun MediaKeyPassthrough() {
         SwitchPreference(
             title = stringResource(R.string.volume_button_passthrough_title),
@@ -175,13 +226,6 @@ private object AppSettings {
         )
     }
 
-    @Composable
-    fun ClearManualInputOnSend() {
-        SwitchPreference(
-            title = stringResource(R.string.clear_manual_input_title),
-            preference = AppPreference.ClearManualInputKey
-        )
-    }
 
     @Composable
     fun TouchpadFullscreenInLandscape() {
@@ -198,6 +242,56 @@ private object AppSettings {
             title = stringResource(R.string.enable_precision_touchpad_title),
             summary = stringResource(R.string.enable_precision_touchpad_summary),
             preference = AppPreference.EnablePrecisionTouchpad
+        )
+    }
+
+    @Composable
+    fun TouchpadMouseSensitivity() {
+        SensitivityPreference(
+            title = stringResource(R.string.touchpad_mouse_sensitivity_title),
+            preference = AppPreference.TouchpadMouseSensitivity
+        )
+    }
+
+    @Composable
+    fun PrecisionTouchpadSensitivity() {
+        SensitivityPreference(
+            title = stringResource(R.string.precision_touchpad_sensitivity_title),
+            preference = AppPreference.PrecisionTouchpadSensitivity
+        )
+    }
+
+    @Composable
+    fun SpenHoverRange() {
+        HoverRangePreference(
+            title = stringResource(R.string.spen_hover_range_title),
+            summary = stringResource(R.string.spen_hover_range_summary),
+            preference = AppPreference.SpenHoverRange
+        )
+    }
+
+    @Composable
+    fun SpenHybridHoverRange() {
+        HoverRangePreference(
+            title = stringResource(R.string.spen_hybrid_hover_range_title),
+            summary = stringResource(R.string.spen_hybrid_hover_range_summary),
+            preference = AppPreference.SpenHybridHoverRange
+        )
+    }
+
+    @Composable
+    fun SpenMouseSensitivity() {
+        SensitivityPreference(
+            title = stringResource(R.string.spen_mouse_sensitivity_title),
+            preference = AppPreference.SpenMouseSensitivity
+        )
+    }
+
+    @Composable
+    fun SpenHybridSensitivity() {
+        SensitivityPreference(
+            title = stringResource(R.string.spen_hybrid_sensitivity_title),
+            preference = AppPreference.SpenHybridSensitivity
         )
     }
 
@@ -246,14 +340,6 @@ private object AppSettings {
         )
     }
 
-    @Composable
-    fun EnableScriptingSupport() {
-        SwitchPreference(
-            title = stringResource(R.string.enable_scripting_support_title),
-            summary = stringResource(R.string.enable_scripting_support_summary),
-            preference = AppPreference.EnableScriptingSupport
-        )
-    }
 }
 
 @DarkLightModePreviews

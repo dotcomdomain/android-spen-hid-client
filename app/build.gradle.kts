@@ -17,8 +17,8 @@ android {
         compileSdk = 36
 
         // App Versioning
-        versionCode = 310
-        versionName = "v3.1.0"
+        versionCode = 311
+        versionName = "v3.1.1-spen"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -26,10 +26,12 @@ android {
         }
 
         // Suppressing warning because this has been marked Incubating for a long long time now.
-        @Suppress("UnstableApiUsage")
-        externalNativeBuild {
-            cmake {
-                cppFlags += ""
+        if (!providers.gradleProperty("termuxBuild").isPresent) {
+            @Suppress("UnstableApiUsage")
+            externalNativeBuild {
+                cmake {
+                    cppFlags += ""
+                }
             }
         }
     }
@@ -55,11 +57,16 @@ android {
         compose = true
         viewBinding = true
     }
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
+    if (!providers.gradleProperty("termuxBuild").isPresent) {
+        externalNativeBuild {
+            cmake {
+                path = file("src/main/cpp/CMakeLists.txt")
+                version = "3.22.1"
+            }
         }
+    } else {
+        // Termux clang builds this library before Gradle starts; its NDK binaries are not needed.
+        sourceSets.getByName("main").jniLibs.srcDir(file("build/termux-jniLibs"))
     }
 
     // Disable Google-encrypted binary blobs

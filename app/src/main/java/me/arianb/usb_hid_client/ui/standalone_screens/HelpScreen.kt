@@ -5,25 +5,42 @@ import android.util.TypedValue
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Draw
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.material.icons.outlined.Mouse
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.runtime.Composable
@@ -39,14 +56,15 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.widget.TextViewCompat
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
 import me.arianb.usb_hid_client.R
-import me.arianb.usb_hid_client.ui.theme.PaddingNone
+import me.arianb.usb_hid_client.ui.theme.CornerLargeIncreased
+import me.arianb.usb_hid_client.ui.theme.CornerMedium
 import me.arianb.usb_hid_client.ui.theme.PaddingNormal
 import me.arianb.usb_hid_client.ui.theme.PaddingSmall
 import me.arianb.usb_hid_client.ui.utils.BasicPage
@@ -64,6 +82,7 @@ class HelpScreen : Screen {
 private data class FaqItem(
     @StringRes val titleResource: Int,
     @StringRes val textResource: Int,
+    val icon: ImageVector = Icons.Outlined.HelpOutline,
     val hasHyperLink: Boolean = false,
 )
 
@@ -71,32 +90,28 @@ private data class FaqItem(
 fun HelpPage() {
     val faqItems = remember {
         arrayOf(
-            FaqItem(R.string.help_faq_q1, R.string.help_faq_a1),
-            FaqItem(R.string.help_faq_q2, R.string.help_faq_a2),
-            FaqItem(R.string.help_faq_q3, R.string.help_faq_a3),
-            FaqItem(R.string.help_faq_q4, R.string.help_faq_a4),
-            FaqItem(R.string.help_faq_q5, R.string.help_faq_a5, hasHyperLink = true),
-            FaqItem(R.string.help_faq_q6, R.string.help_faq_a6, hasHyperLink = true),
+            FaqItem(R.string.help_faq_q1, R.string.help_faq_a1, icon = Icons.Outlined.HelpOutline),
+            FaqItem(R.string.help_faq_spen_title, R.string.help_faq_spen_content, icon = Icons.Outlined.Draw),
+            FaqItem(R.string.help_faq_touchpad_title, R.string.help_faq_touchpad_content, icon = Icons.Outlined.Mouse),
+            FaqItem(R.string.help_faq_q2, R.string.help_faq_a2, icon = Icons.Outlined.Keyboard),
+            FaqItem(R.string.help_faq_setup_title, R.string.help_faq_setup_content, icon = Icons.Outlined.Build),
+            FaqItem(R.string.help_faq_q5, R.string.help_faq_a5, icon = Icons.Outlined.Info, hasHyperLink = true),
         )
     }
 
     BasicPage(
         topBar = { HelpTopBar() },
-        padding = PaddingValues(all = PaddingNormal),
-        verticalArrangement = Arrangement.spacedBy(PaddingNone, Alignment.Top),
+        padding = PaddingValues(horizontal = PaddingNormal, vertical = PaddingSmall),
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Top),
         scrollable = true,
     ) {
         for (item in faqItems) {
             key(item) {
-                ExpandableText(
-                    item.titleResource,
-                    item.textResource,
+                ExpandableFaqCard(
+                    titleResource = item.titleResource,
+                    textResource = item.textResource,
+                    icon = item.icon,
                     useLegacyTextViewForText = item.hasHyperLink
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(PaddingSmall),
-                    thickness = Dp.Hairline
                 )
             }
         }
@@ -113,62 +128,98 @@ private fun HelpTopBar() {
 }
 
 @Composable
-fun ExpandableText(
+fun ExpandableFaqCard(
     @StringRes titleResource: Int,
     @StringRes textResource: Int,
+    icon: ImageVector = Icons.Outlined.HelpOutline,
     useLegacyTextViewForText: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val degrees by animateFloatAsState(if (expanded) 180f else 0f)
-    Column {
-        Row(
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.large)
-                .clickable { expanded = !expanded }
-                .fillMaxWidth()
-                .padding(PaddingNormal),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                stringResource(titleResource),
+    val degrees by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+        label = "arrowDegrees"
+    )
 
-                // Stops the icon below from being hidden if text overflows the line
-                modifier = Modifier.weight(
-                    weight = 1f,
-                    fill = false
-                ),
-            )
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
-                modifier = Modifier
-                    .rotate(degrees),
-            )
-        }
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(
-                spring(
-                    visibilityThreshold = IntSize.VisibilityThreshold
-                )
-            ),
-            exit = shrinkVertically()
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (expanded) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
+        ),
+        border = null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(PaddingNormal)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (useLegacyTextViewForText) {
-                    ComposeTextView(
-                        textResource,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                } else {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
                     Text(
-                        stringResource(textResource),
-                        style = MaterialTheme.typography.bodySmall
+                        text = stringResource(titleResource),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                }
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .rotate(degrees)
+                        .padding(start = 8.dp)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, start = 44.dp)
+                ) {
+                    if (useLegacyTextViewForText) {
+                        ComposeTextView(
+                            textResource,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(textResource),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -176,10 +227,7 @@ fun ExpandableText(
 }
 
 /**
- * Helper Composable created due to how painful it is to work with hyperlinks
- * in Compose without a View.
- *
- * NOTE: only a few TextStyle properties work here
+ * Helper Composable for HTML/hyperlinks in text.
  */
 @Composable
 fun ComposeTextView(
@@ -195,13 +243,9 @@ fun ComposeTextView(
         factory = { context ->
             TextView(context).apply {
                 movementMethod = LinkMovementMethod.getInstance()
-
                 textSize = style.fontSize.value
-
                 if (style.lineHeight.isSp) {
                     TextViewCompat.setLineHeight(this, TypedValue.COMPLEX_UNIT_SP, style.lineHeight.value)
-                } else {
-                    // TODO: handle the case when it's em if i want
                 }
             }
         },

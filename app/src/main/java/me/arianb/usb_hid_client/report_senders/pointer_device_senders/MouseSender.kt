@@ -25,31 +25,6 @@ class MouseSender(
         relativeY: Byte,
         touchpadButtonState: TouchpadButtonState
     ) {
-        super.addReportToChannel(
-            getMouseReport(
-                relativeX,
-                relativeY,
-                touchpadButtonState.toByte()
-            )
-        )
-    }
-
-    private fun getMouseReport(
-        x: Byte,
-        y: Byte,
-        buttonByte: Byte
-    ): ByteArray {
-        val trailingPaddingByteArray = ByteArray(5)
-
-        return byteArrayOf(
-            MOUSE_REPORT_ID,
-            buttonByte,
-            x,
-            y,
-        ) + trailingPaddingByteArray
-    }
-
-    companion object {
-        private const val MOUSE_REPORT_ID: Byte = 1
+        sendRelativeMouseReport(relativeX.toInt(), relativeY.toInt(), touchpadButtonState)
     }
 }
