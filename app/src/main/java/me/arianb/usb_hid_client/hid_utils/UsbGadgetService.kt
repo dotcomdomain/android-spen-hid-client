@@ -8,6 +8,7 @@ import android.os.Message
 import android.os.Messenger
 import android.os.Parcelable
 import android.os.Process
+import android.os.RemoteException
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import kotlinx.parcelize.Parcelize
@@ -80,6 +81,12 @@ class UsbGadgetService : RootService() {
                 // when I didn't
                 Timber.w("Oh no, an unhandled exception occurred in UsbGadgetService")
                 Timber.w(e)
+            } finally {
+                try {
+                    msg.replyTo?.send(Message.obtain(null, MSG_COMPLETE))
+                } catch (e: RemoteException) {
+                    Timber.w(e, "Failed to acknowledge USB gadget operation")
+                }
             }
 
             return true
@@ -101,6 +108,7 @@ class UsbGadgetService : RootService() {
 
         const val MSG_CREATE = 0
         const val MSG_DELETE = 1
+        const val MSG_COMPLETE = 2
     }
 }
 
@@ -113,6 +121,14 @@ internal class UsbGadgetManager(val gadgetUserPreferences: GadgetUserPreferences
 
     private val CONFIGS_PATH: Path = USB_GADGET_PATH / "configs/b.1/"
     private val FUNCTIONS_PATH: Path = USB_GADGET_PATH / "functions/"
+    private val ANDROID_USB_PATH: Path = Path("/sys/class/android_usb/android0")
+    private val ANDROID_USB_ENABLE_PATH: Path = ANDROID_USB_PATH / "enable"
+    private val ANDROID_USB_FUNCTIONS_PATH: Path = ANDROID_USB_PATH / "functions"
+    private val SAVED_USB_CONFIG_PATH: Path = Path("/data/local/tmp/android-hid-client-usb-config")
+    private val SAVED_USB_FUNCTIONS_PATH: Path = Path("/data/local/tmp/android-hid-client-usb-functions")
+
+    private val usesSamsungUsbSelector: Boolean
+        get() = ANDROID_USB_ENABLE_PATH.isRegularFile() && ANDROID_USB_FUNCTIONS_PATH.isRegularFile()
 
     private inner class HidFunction(
         val name: String,
@@ -190,7 +206,7 @@ internal class UsbGadgetManager(val gadgetUserPreferences: GadgetUserPreferences
         //  which is reasonable, since the function would be active.
 
         val gadgetFunctionLinksToRestore: List<Pair<Path, Path>> =
-            if (gadgetUserPreferences.disableGadgetFunctionsDuringConfiguration) {
+            if (gadgetUserPreferences.disableGadgetFunctionsDuringConfiguration && !usesSamsungUsbSelector) {
                 getGadgetFunctionLinksToRestore().apply {
                     // Delete links
                     forEach { (linkPath, _) ->
@@ -335,6 +351,22 @@ internal class UsbGadgetManager(val gadgetUserPreferences: GadgetUserPreferences
 
     @Throws(IOException::class)
     private fun disableGadget() {
+        if (usesSamsungUsbSelector) {
+            val usbConfig = getSystemProperty("sys.usb.config")
+            if (usbConfig.isNotBlank() && usbConfig != "none") {
+                SAVED_USB_CONFIG_PATH.writeText(usbConfig)
+                SAVED_USB_FUNCTIONS_PATH.writeText(ANDROID_USB_FUNCTIONS_PATH.toFile().readText().trim())
+                setSystemProperty("sys.usb.config", "none")
+                var attempts = 0
+                while (getSystemProperty("sys.usb.state") != "none" && attempts < 50) {
+                    Thread.sleep(100)
+                    attempts++
+                }
+            }
+            ANDROID_USB_ENABLE_PATH.writeText("0")
+            return
+        }
+
         UDC_PATH.writer(options = arrayOf(StandardOpenOption.SYNC)).use {
             // For some reason, it was refusing to clear without writing a newline, other whitespace didn't seem to work.
             it.write("\n")
@@ -345,6 +377,28 @@ internal class UsbGadgetManager(val gadgetUserPreferences: GadgetUserPreferences
     private fun enableGadget() {
         val udc = getUDC()
 
+        if (usesSamsungUsbSelector) {
+            // Samsung's Exynos ConfigFS fork keeps every function symlinked and selects active functions here.
+            // One "hid" token selects every linked HID instance.
+            val originalFunctions = runCatching { SAVED_USB_FUNCTIONS_PATH.toFile().readText().trim() }
+                .getOrDefault("")
+            if (originalFunctions.split(',').contains("adb")) {
+                runCommand("/system/bin/start", "adbd")
+                var attempts = 0
+                while (getSystemProperty("sys.usb.ffs.ready") != "1" && attempts < 50) {
+                    Thread.sleep(100)
+                    attempts++
+                }
+            }
+            val functions = (
+                originalFunctions.split(',').filter { it.isNotBlank() && it != "hid" } + "hid"
+            ).distinct().joinToString(",")
+            ANDROID_USB_FUNCTIONS_PATH.writeText(functions)
+            UDC_PATH.writeText(udc)
+            ANDROID_USB_ENABLE_PATH.writeText("1")
+            return
+        }
+
         UDC_PATH.writer(options = arrayOf(StandardOpenOption.SYNC)).use {
             // This part seems to happen implicitly
             it.write(udc)
@@ -353,6 +407,12 @@ internal class UsbGadgetManager(val gadgetUserPreferences: GadgetUserPreferences
 
     @OptIn(ExperimentalPathApi::class)
     fun deleteCharacterDevices() {
+        if (usesSamsungUsbSelector) {
+            disableGadget()
+            // Move the HID functions into the active list so Samsung's ConfigFS unlink callback can find them.
+            ANDROID_USB_FUNCTIONS_PATH.writeText("hid")
+        }
+
         for (hidFunction in allHidFunctions) {
             try {
                 // Clear out function configuration directory (should just point to function path)
@@ -365,13 +425,43 @@ internal class UsbGadgetManager(val gadgetUserPreferences: GadgetUserPreferences
                 Timber.e(e)
             }
 
-            // Apply changes
-            resetGadget()
-
             // Delete character devices
             CharacterDeviceManager.Companion.DevicePaths.all.map { Path(it.path) }.forEach {
                 it.deleteIfExists()
             }
+        }
+
+        if (usesSamsungUsbSelector) {
+            val usbConfig = runCatching { SAVED_USB_CONFIG_PATH.toFile().readText().trim() }
+                .getOrDefault("adb")
+                .ifBlank { "adb" }
+            SAVED_USB_CONFIG_PATH.deleteIfExists()
+            SAVED_USB_FUNCTIONS_PATH.deleteIfExists()
+            setSystemProperty("sys.usb.config", usbConfig)
+        } else {
+            resetGadget()
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun getSystemProperty(name: String): String {
+        val process = ProcessBuilder("/system/bin/getprop", name).redirectErrorStream(true).start()
+        val value = process.inputStream.bufferedReader().use { it.readText().trim() }
+        if (process.waitFor() != 0) throw IOException("Failed to read Android property: $name")
+        return value
+    }
+
+    @Throws(IOException::class)
+    private fun setSystemProperty(name: String, value: String) {
+        runCommand("/system/bin/setprop", name, value)
+    }
+
+    @Throws(IOException::class)
+    private fun runCommand(vararg command: String) {
+        val process = ProcessBuilder(*command).redirectErrorStream(true).start()
+        val output = process.inputStream.bufferedReader().use { it.readText().trim() }
+        if (process.waitFor() != 0) {
+            throw IOException("Command failed (${command.joinToString(" ")}): $output")
         }
     }
 

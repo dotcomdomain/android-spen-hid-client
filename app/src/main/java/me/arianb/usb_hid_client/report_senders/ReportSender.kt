@@ -1,7 +1,9 @@
 package me.arianb.usb_hid_client.report_senders
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.withContext
 import me.arianb.usb_hid_client.hid_utils.DevicePath
 import timber.log.Timber
@@ -12,9 +14,8 @@ import java.io.IOException
 abstract class ReportSender(
     val characterDevicePath: DevicePath
 ) {
-    private val reportsChannel = Channel<ByteArray>(Channel.UNLIMITED) {
-        Timber.wtf("A channel with an unlimited buffer shouldn't be failing to receive elements")
-    }
+    // Keep the newest reports, especially button releases, if USB temporarily stops accepting writes.
+    private val reportsChannel = Channel<ByteArray>(256, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     @OptIn(ExperimentalStdlibApi::class)
     suspend fun start(onSuccess: () -> Unit, onException: (e: IOException) -> Unit) = withContext(Dispatchers.IO) {
@@ -28,6 +29,9 @@ abstract class ReportSender(
 
                 // TODO: map exception to a sealed error type and pass that to lambda?
                 onException(e)
+                // Reports from a disconnected host must not replay as delayed cursor movement.
+                while (reportsChannel.tryReceive().isSuccess) { /* discard stale reports */ }
+                delay(250)
             }
         }
     }
@@ -39,7 +43,7 @@ abstract class ReportSender(
     //
     // Of course, make sure the argument list matches what the character device is expecting.
     protected fun addReportToChannel(report: ByteArray) {
-        // This should always succeed since the Channel's buffer is unlimited
+        // DROP_OLDEST keeps the latest state when the host falls behind.
         reportsChannel.trySend(report)
     }
 

@@ -213,7 +213,11 @@ annotation class ModifiesStateDirectly
 interface DevicePath {
     val path: String
 
-    fun exists(): Boolean = File(path).exists()
+    fun exists(): Boolean {
+        val characterDevice = File(path)
+        val activeHidDevice = File("/sys/class/hidg/${characterDevice.name}")
+        return characterDevice.exists() && activeHidDevice.exists()
+    }
 }
 
 @JvmInline

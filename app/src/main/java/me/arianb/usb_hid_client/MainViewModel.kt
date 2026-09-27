@@ -2,8 +2,10 @@ package me.arianb.usb_hid_client
 
 import android.app.Application
 import android.util.Log
+import com.topjohnwu.superuser.Shell
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -25,6 +27,7 @@ import me.arianb.usb_hid_client.shell_utils.RootStateHolder
 import timber.log.Timber
 import java.io.FileNotFoundException
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Data class that represents the UI state
@@ -33,6 +36,7 @@ data class MyUiState(
     // Character Device Stuff
     val missingCharacterDevice: Boolean = false,
     val isCharacterDevicePermissionsBroken: String? = null,
+    val usbHidKernelUnsupported: Boolean = false,
 
     // Other Stuff
     val isDeviceUnplugged: Boolean = false
@@ -45,6 +49,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val characterDeviceManager = CharacterDeviceManager.getInstance(application)
     private val rootStateHolder = RootStateHolder.getInstance()
     private val userPreferencesStateFlow = UserPreferencesRepository.getInstance(application).userPreferencesFlow
+    private val isRecoveringGadget = AtomicBoolean(false)
 
     val keySender: StateFlow<KeySender> = userPreferencesStateFlow
         .mapState {
@@ -69,6 +74,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val senderFlowList = listOf(keySender, touchpadSender)
 
     init {
+        viewModelScope.launch {
+            while (true) {
+                delay(2000)
+                if (anyCharacterDeviceMissing()) {
+                    recoverDisabledGadget()
+                }
+            }
+        }
+
         senderFlowList.forEach { senderFlow ->
             viewModelScope.launch {
                 senderFlow.collectLatest { sender ->
@@ -82,6 +96,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             val characterDevicePath = sender.characterDevicePath
                             if (e is FileNotFoundException && characterDeviceMissing(characterDevicePath)) {
                                 Timber.i("Character device '$characterDevicePath' doesn't exist. The user probably skipped the character device creation prompt.")
+                                recoverDisabledGadget()
                             } else {
                                 handleException(e, sender.characterDevicePath)
                             }
@@ -99,11 +114,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (lowercaseExceptionString.contains("errno 108")) {
             Timber.i("device might be unplugged")
             _uiState.update { it.copy(isDeviceUnplugged = true) }
+            recoverDisabledGadget()
         } else if (lowercaseExceptionString.contains("permission denied")) {
             Timber.i("char dev perms are wrong")
             _uiState.update { it.copy(isCharacterDevicePermissionsBroken = devicePath.path) }
         } else if (lowercaseExceptionString.contains("enxio")) {
             Timber.i("somehow the HID gadget is disabled but the character devices are still present")
+            _uiState.update { it.copy(missingCharacterDevice = true) }
+            recoverDisabledGadget()
         } else {
             Timber.e(e)
             Timber.e("unknown error has occurred while trying to write to character device")
@@ -113,10 +131,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Timber.d("in MainViewModel, new state is: %s", uiState.value.toString())
     }
 
+    private fun recoverDisabledGadget() {
+        if (!rootStateHolder.hasRootPermissions()) return
+        if (!isRecoveringGadget.compareAndSet(false, true)) return
+
+        viewModelScope.launch {
+            try {
+                val preferences = GadgetUserPreferences.fromUserPreferences(userPreferencesStateFlow.value)
+                characterDeviceManager.createCharacterDevices(preferences)
+                anyCharacterDeviceMissing()
+            } finally {
+                isRecoveringGadget.set(false)
+            }
+        }
+    }
+
     // Character Device Manager
     fun createCharacterDevices() {
         if (!rootStateHolder.hasRootPermissions()) {
             Timber.w("Can't create character devices, missing root permissions")
+            return
+        }
+        if (kernelLacksUsbHid()) {
+            _uiState.update { it.copy(usbHidKernelUnsupported = true) }
             return
         }
 
@@ -143,6 +180,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             anyCharacterDeviceMissing()
         }
     }
+
+    fun recreateCharacterDevices() {
+        if (!rootStateHolder.hasRootPermissions()) return
+        if (kernelLacksUsbHid()) {
+            createCharacterDevices()
+            return
+        }
+        viewModelScope.launch {
+            val preferences = GadgetUserPreferences.fromUserPreferences(userPreferencesStateFlow.value)
+            characterDeviceManager.deleteCharacterDevices(preferences)
+            characterDeviceManager.createCharacterDevices(preferences)
+            anyCharacterDeviceMissing()
+        }
+    }
+
+    private fun kernelLacksUsbHid(): Boolean = Shell.cmd(
+        "/system/bin/zcat /proc/config.gz | /system/bin/grep -q '^# CONFIG_USB_CONFIGFS_F_HID is not set$'"
+    ).exec().code == 0
 
     fun fixCharacterDevicePermissions(device: String) {
         if (!rootStateHolder.hasRootPermissions()) {
