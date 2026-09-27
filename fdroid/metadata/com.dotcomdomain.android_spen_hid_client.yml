@@ -1,0 +1,35 @@
+Categories:
+  - System
+License: GPL-3.0-only
+AuthorName: dotcomdomain
+SourceCode: https://github.com/dotcomdomain/android-spen-hid-client
+IssueTracker: https://github.com/dotcomdomain/android-spen-hid-client/issues
+Changelog: https://github.com/dotcomdomain/android-spen-hid-client/releases
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags ^v[0-9]+.*$
+CurrentVersion: 3.2.0
+CurrentVersionCode: 320
+
+Builds:
+  - versionName: 3.2.0
+    versionCode: 320
+    commit: v3.2.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoName: Android S Pen HID Client
+Description: |-
+  Use a rooted Android device as a hardware USB HID input device for your PC.
+  Because communication happens directly via the Linux USB gadget kernel driver
+  (/dev/hidg*), your computer detects it as genuine plug-and-play USB hardware
+  with zero drivers or client software required on the host.
+
+  Features:
+  * Samsung S Pen Graphics Tablet: High-precision digitizer with 4096 pressure
+    levels, hover tracking, barrel button eraser toggle, and orientation-aware mapping.
+  * Windows Precision Touchpad (PTP): Multi-touch trackpad supporting smooth 1-5
+    finger gestures, tap-to-click, pinch-to-zoom, and scrolling.
+  * USB Keyboard & Mouse: Direct typing, scriptable keystrokes, and standard mouse
+    controls. Works even inside BIOS/UEFI.
