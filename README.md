@@ -4,6 +4,25 @@ Use a rooted Android phone as a USB keyboard, mouse, Windows Precision Touchpad,
 
 This is a fork of [Arian04/android-hid-client](https://github.com/Arian04/android-hid-client). The original project supplies the USB keyboard, mouse, ConfigFS gadget management, and root integration that this work builds on.
 
+## Screenshots
+
+<p align="center">
+  <img src="images/app-screenshot1.png" width="23%" alt="Touchpad Portrait" />
+  <img src="images/app-screenshot3.png" width="23%" alt="Settings" />
+  <img src="images/app-screenshot4.png" width="23%" alt="S Pen Configuration" />
+  <img src="images/app-screenshot5.png" width="23%" alt="Help & Gestures" />
+</p>
+
+<p align="center">
+  <img src="images/app-screenshot2.png" width="70%" alt="Fullscreen Landscape Touchpad" />
+  <br>
+  <em>Fullscreen drawing tablet / touchpad canvas in landscape orientation with floating keyboard access</em>
+</p>
+
+## Downloads
+
+Download the latest signed release APK from [GitHub Releases](https://github.com/dotcomdomain/android-spen-hid-client/releases/latest).
+
 ## What changed in this fork
 
 ### S Pen input
@@ -70,7 +89,7 @@ The current development device is a Samsung Galaxy Note9, model SM-N960F, runnin
 3. Build the `debug` or `release` APK from Android Studio.
 4. Install the APK on the rooted Android device.
 
-The package name remains `me.arianb.usb_hid_client` so this fork upgrades an existing installation of the upstream app when signatures match.
+The package name is `com.dotcomdomain.android_spen_hid_client`, allowing standalone installation alongside the original upstream app.
 
 ### Termux on arm64
 
