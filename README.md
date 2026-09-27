@@ -1,245 +1,108 @@
-<div id="top"></div>
-
-<!-- PROJECT SHIELDS -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![GPL-3.0 License][license-shield]][license-url]
-<br />
-[![IzzyOnDroid Repo Version][izzyondroid-shield]][izzyondroid-url]
-
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/Arian04/android-hid-client">
-    <img src="images/app-icon-round.png" alt="App Icon" width="80" height="80">
-  </a>
-
-<h3 align="center">USB HID Client</h3>
-  <p align="center">
-    Android app that allows you to easily use your phone as a keyboard and mouse
-    <br />
-    <br />
-    <a href="https://github.com/Arian04/android-hid-client/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/Arian04/android-hid-client/issues">Request Feature</a>
-  </p>
-</div>
-
-
-
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
-
-
-
-<!-- ABOUT THE PROJECT -->
-
-## About The Project
-
-[<img src="images/app-screenshot1.png"
-alt="Main screen"
-height="350">](images/app-screenshot1.png)
-[<img src="images/app-screenshot2.png"
-alt="Main screen with menu open"
-height="350">](images/app-screenshot2.png)
-[<img src="images/app-screenshot3.png"
-alt="App settings screen"
-height="350">](images/app-screenshot3.png)
-[<img src="images/app-screenshot4.png"
-alt="Help screen with frequently asked questions"
-height="350">](images/app-screenshot4.png)
+# S Pen Drawing Tablet
 
-This Android app allows you your phone to present itself to a connected device as a keyboard and mouse.
-Since this happens at a very low level, the connected device sees it exactly as a normal keyboard and mouse, meaning
-you don't need to install any software on the connected computer! For this reason, it will even work if the
-connected device is in its BIOS/UEFI. Even multimedia keys are supported, meaning you can send volume up/down
-keys to the connected computer to control media.
+Use a rooted Android phone as a USB keyboard, mouse, Windows Precision Touchpad, or S Pen input device. The host computer sees standard USB HID devices, so it does not need a companion program.
 
-**Disclaimers**:
+This is a fork of [Arian04/android-hid-client](https://github.com/Arian04/android-hid-client). The original project supplies the USB keyboard, mouse, ConfigFS gadget management, and root integration that this work builds on.
 
-- This app requires your device to be rooted.
-- I strongly recommend using a keyboard such as [Unexpected Keyboard](https://github.com/Julow/Unexpected-Keyboard) to
-  use special keys such as modifier and function keys, but most functionality will work with any standard Android
-  keyboard.
+## What changed in this fork
 
-Bonus description for nerds: This app adds (and provides a simple UI for you to communicate with) two character
-devices (`/dev/hidg0` and `/dev/hidg1` respectively) by
-adding HID functions to the default Android USB gadget. If you wanted to, you could just use this app to create the
-character devices, then
-communicate solely through some C program, shell script, or whatever else you wanted as long as it had the right
-permissions to access the
-character devices and knew how to send proper reports to them. Beware of SELinux policies if you do that though. If
-anyone is actually doing that, let
-me know, I'd be glad to help if necessary.
+### S Pen input
 
-Tested primarily on: Linux (Host computer) and Pixel 5 running Android 14.
+The main input area accepts finger and stylus input without a manual input switch. S Pen input has three modes:
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+| Mode | Behavior |
+| --- | --- |
+| Hover | Maps the pen's absolute position to the host screen. Touching presses the left mouse button. |
+| Mouse | Moves the pointer like a trackpad while the pen touches the phone. A tap clicks. Double tap and hold starts a left button drag. |
+| Hybrid | Moves the pointer relative to its previous position while the pen is in digitizer range. Touching holds the left mouse button. |
 
+The S Pen side button sends the right mouse button. Holding it while hovering opens a radial mode selector. Hover and Hybrid modes have separate range controls, while Mouse and Hybrid modes have separate sensitivity controls.
 
+The USB report descriptor includes a separate absolute mouse collection for Hover mode.
 
-<!-- GETTING STARTED -->
+### Windows Precision Touchpad
 
-## Getting Started
+The finger input area can expose a native multitouch Precision Touchpad to Windows. This fork adds:
 
-### Prerequisites
+- a Windows compatible Precision Touchpad report descriptor
+- complete multitouch frames with contact IDs, counts, scan times, and explicit lift reports
+- one finger left click and two finger right click behavior handled by Windows
+- coordinate mapping that keeps touch speed equal in portrait and landscape
+- a larger square HID coordinate range so the whole landscape input area remains usable
+- separate sensitivity controls for standard and precision touchpad modes
 
-* Rooted device running Android
-    - Only specific root methods are supported, because I need to patch SELinux policy at runtime and am using provided
-      tools to do so.
-      if your root method isn't on this list and provides a method for live-patching SELinux policy, feel free to create
-      an issue.
-        - Magisk: `magiskpolicy`
-        - KernelSU: `ksud sepolicy patch`
-    - Android version that I currently test with: 14
-* Soft Keyboard
-    - I test the app with Gboard and Unexpected Keyboard, but Unexpected Keyboard is the one with slightly better
-      support, more keys,
-      and [fewer issues](https://github.com/Arian04/android-hid-client/issues?q=label%3A"soft+keyboard+issue").
+Linux and other hosts can still use the HID touchpad. Precision gestures depend on the host operating system.
 
-### Installation (Binary)<a name="installation-binary"> </a>
+### USB gadget support
 
-The recommended way to install the app is through the [IzzyOnDroid repo][izzyondroid-url] via an app
-that's compatible with F-Droid style repositories, since that'll make updates much easier. However, you can also
-download
-the APK file from the [Github releases page](https://github.com/Arian04/android-hid-client/releases), then install it
-on your Android device.
+Samsung's Exynos USB stack does not manage ConfigFS exactly like AOSP. This fork adds handling for Samsung's USB function selector, preserves ADB while rebuilding the gadget, waits for gadget operations to finish, and avoids duplicate HID entries on later rebuilds.
 
-### Installation (Source)<a name="installation-source"></a>
+The app reports missing kernel HID support instead of presenting a generic disconnected-device error.
 
-Clone the repository.
+### Interface and controls
 
-   ```sh
-   git clone https://github.com/Arian04/android-hid-client.git
-   ```
+- Material 3 interface throughout the app
+- fullscreen touchpad option in landscape
+- optional hidden status bar and app title
+- floating keyboard control in fullscreen landscape
+- updated onboarding, help, diagnostics, settings, and manual input screens
+- configurable sensitivity for both touchpad modes and the relative S Pen modes
+- separate Hover and Hybrid tracking ranges
 
-import into [Android Studio](https://developer.android.com/studio), build the APK, then install it
-on your Android device.
+## Requirements
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+- Android 8.0 or newer
+- root through Magisk or KernelSU
+- USB device mode and ConfigFS support
+- the kernel option `CONFIG_USB_CONFIGFS_F_HID=y` or equivalent built in HID gadget support
+- permission to create and write `/dev/hidg*` devices
 
-<!-- USAGE EXAMPLES -->
+Root access alone cannot add a missing HID gadget driver. A stock kernel that omits the driver needs a compatible custom kernel.
 
-## Usage
+The current development device is a Samsung Galaxy Note9, model SM-N960F, running Android 16 and kernel 4.9.337. Other rooted devices should work when their kernel and USB controller provide the requirements above. Stylus behavior depends on Android exposing hover, distance, and button events through `MotionEvent`.
 
-To relay keys in real-time as soon as you press them, click on the keyboard icon in the menu bar. It should pull up your
-keyboard. Now you can just start typing!
+## Build
 
-Typing in the "Manual Input" text box will send all the characters that you've typed into the box to
-the connected device once you hit the "send" button.
+### Android Studio
 
-### Some Use Cases
+1. Clone the repository.
+2. Open it in a current Android Studio version with JDK 21 and Android SDK 36 installed.
+3. Build the `debug` or `release` APK from Android Studio.
+4. Install the APK on the rooted Android device.
 
-* Quickly be able to change BIOS/UEFI settings of a computer when you don't have a keyboard with you
-* Typing a long string (such as a password or IP address) into a console
+The package name remains `me.arianb.usb_hid_client` so this fork upgrades an existing installation of the upstream app when signatures match.
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+### Termux on arm64
 
+Install JDK 21, Clang, and Android SDK platform and build tools 36. Then run:
 
+```sh
+./scripts/build-termux.sh
+```
 
-<!-- ROADMAP -->
+The script builds the native library with Termux Clang and passes the Termux `aapt2` binary to Gradle. The resulting APK is written to:
 
-## Roadmap
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
 
-- [X] Keyboard support
-- [ ] Add some special key buttons to the UI (like multimedia keys)
-- [X] Touchpad support
-- [X] Ability to send string all at once
-- [X] Add full settings page
-- [X] Add prompt to create /dev/hidgX if not present
+## First run
 
-See the [open issues][issues-url] for a full list of proposed features (and known issues).
+1. Grant root access.
+2. Let the app create its keyboard and pointer HID functions.
+3. Reconnect USB if the host does not immediately enumerate the new interfaces.
+4. Enable Precision Touchpad in Settings when using Windows gestures.
 
-<p align="right">(<a href="#top">back to top</a>)</p>
+Changing the HID report descriptor requires the USB gadget to disconnect and enumerate again. Wired ADB will briefly disconnect during that operation.
 
+## General device compatibility
 
+Keyboard and standard mouse output are the most portable features. Precision Touchpad support uses standard HID reports but requires a host that understands the protocol. S Pen support also works with another active stylus if its Android driver reports stylus hover, contact, distance, and side button events.
 
-<!-- CONTRIBUTING -->
+Manufacturer USB services may replace custom gadget functions after a cable reconnect or reboot. The Samsung specific path in this fork handles the behavior found on the Exynos 9810 Note9. Other vendor implementations may need their own adapter.
 
-## Contributing
+## Upstream and license
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any
-contributions you make are **greatly appreciated**.
+Original project: [Arian04/android-hid-client](https://github.com/Arian04/android-hid-client)
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also
-simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
-
-## License
-
-Distributed under the GNU GPLv3 License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-
-## Acknowledgments
-
-* [IzzyOnDroid](https://floss.social/@IzzyOnDroid) for adding this app
-  to [his F-Droid repository](https://android.izzysoft.de/repo)
-* [Best-README-Template](https://github.com/othneildrew/Best-README-Template)
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-
-[contributors-shield]: https://img.shields.io/github/contributors/Arian04/android-hid-client.svg?style=for-the-badge
-
-[contributors-url]: https://github.com/Arian04/android-hid-client/graphs/contributors
-
-[forks-shield]: https://img.shields.io/github/forks/Arian04/android-hid-client.svg?style=for-the-badge
-
-[forks-url]: https://github.com/Arian04/android-hid-client/network/members
-
-[stars-shield]: https://img.shields.io/github/stars/Arian04/android-hid-client.svg?style=for-the-badge
-
-[stars-url]: https://github.com/Arian04/android-hid-client/stargazers
-
-[issues-shield]: https://img.shields.io/github/issues/Arian04/android-hid-client.svg?style=for-the-badge
-
-[issues-url]: https://github.com/Arian04/android-hid-client/issues
-
-[license-shield]: https://img.shields.io/github/license/Arian04/android-hid-client.svg?style=for-the-badge
-
-[license-url]: https://github.com/Arian04/android-hid-client/blob/master/LICENSE.txt
-
-[izzyondroid-shield]: https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/me.arianb.usb_hid_client&style=for-the-badge
-
-[izzyondroid-url]: https://apt.izzysoft.de/packages/me.arianb.usb_hid_client
+This fork keeps the upstream Git history and is distributed under the [GNU General Public License v3.0](LICENSE).
