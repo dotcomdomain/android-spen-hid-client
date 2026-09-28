@@ -6,10 +6,10 @@ SourceCode: https://github.com/dotcomdomain/android-spen-hid-client
 IssueTracker: https://github.com/dotcomdomain/android-spen-hid-client/issues
 Changelog: https://github.com/dotcomdomain/android-spen-hid-client/releases
 
-AutoUpdateMode: Version v%v
-UpdateCheckMode: Tags ^v[0-9]+.*$
-CurrentVersion: 3.2.0
-CurrentVersionCode: 320
+AutoName: Android S Pen HID Client
+
+RepoType: git
+Repo: https://github.com/dotcomdomain/android-spen-hid-client.git
 
 Builds:
   - versionName: 3.2.0
@@ -19,7 +19,11 @@ Builds:
     gradle:
       - yes
 
-AutoName: Android S Pen HID Client
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 3.2.0
+CurrentVersionCode: 320
+
 Description: |-
   Use a rooted Android device as a hardware USB HID input device for your PC.
   Because communication happens directly via the Linux USB gadget kernel driver
