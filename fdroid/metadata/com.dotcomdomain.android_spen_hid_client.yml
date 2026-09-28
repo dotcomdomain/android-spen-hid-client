@@ -14,7 +14,7 @@ Repo: https://github.com/dotcomdomain/android-spen-hid-client.git
 Builds:
   - versionName: 3.2.0
     versionCode: 320
-    commit: v3.2.0
+    commit: 818f98208582a01279c3f85376b150f96035f961
     subdir: app
     gradle:
       - yes
