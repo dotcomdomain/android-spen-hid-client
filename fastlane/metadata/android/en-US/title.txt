@@ -1,1 +1,1 @@
-Android S Pen HID Client
+Android USB HID Client

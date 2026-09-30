@@ -9,7 +9,7 @@ plugins {
 android {
     namespace = "me.arianb.usb_hid_client"
     defaultConfig {
-        applicationId = "com.dotcomdomain.android_spen_hid_client"
+        applicationId = "io.github.dotcomdomain.usbhidclient"
 
         // SDK support
         minSdk = 26
@@ -17,8 +17,8 @@ android {
         compileSdk = 36
 
         // App Versioning
-        versionCode = 320
-        versionName = "3.2.0"
+        versionCode = 330
+        versionName = "3.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

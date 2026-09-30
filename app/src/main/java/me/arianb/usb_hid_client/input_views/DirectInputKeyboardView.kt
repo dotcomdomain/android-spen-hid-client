@@ -14,11 +14,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,12 +28,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.compose.ui.viewinterop.AndroidViewBinding
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import me.arianb.usb_hid_client.MainViewModel
 import me.arianb.usb_hid_client.R
 import me.arianb.usb_hid_client.databinding.DirectInputViewBinding
@@ -158,25 +162,41 @@ fun DirectInputIconButton() {
     val localView = LocalView.current
     val context = LocalContext.current
     val isImeVisible = WindowInsets.isImeVisible
+    val navigator = LocalNavigator.currentOrThrow
 
-    FilledTonalIconButton(
-        modifier = Modifier.padding(end = 4.dp),
-        colors = IconButtonDefaults.filledTonalIconButtonColors(
-            containerColor = if (isImeVisible) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = if (isImeVisible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
-        ),
-        onClick = {
-            val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
-            if (currentlyActive) {
-                hideDirectInputSoftKeyboard(context, localView)
-            } else {
-                showDirectInputSoftKeyboard(context, localView)
-            }
-        }
+    Surface(
+        shape = CircleShape,
+        color = if (isImeVisible) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = if (isImeVisible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier
+            .padding(end = 4.dp)
+            .size(40.dp)
+            .combinedClickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.direct_input),
+                onLongClickLabel = stringResource(R.string.open_full_keyboard),
+                onLongClick = {
+                    hideDirectInputSoftKeyboard(context, localView)
+                    navigator.push(FullKeyboardScreen())
+                },
+                onClick = {
+                    val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
+                    if (currentlyActive) {
+                        hideDirectInputSoftKeyboard(context, localView)
+                    } else {
+                        showDirectInputSoftKeyboard(context, localView)
+                    }
+                },
+            ),
     ) {
-        Icon(
-            painter = painterResource(R.drawable.keyboard),
-            contentDescription = stringResource(R.string.direct_input)
-        )
+        androidx.compose.foundation.layout.Box(
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+            modifier = Modifier.size(40.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.keyboard),
+                contentDescription = stringResource(R.string.keyboard_icon_description)
+            )
+        }
     }
 }

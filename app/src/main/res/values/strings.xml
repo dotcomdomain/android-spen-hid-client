@@ -2,8 +2,13 @@
     <!-- Note: Remember to escape quotes, I forgot one time and Android Studio didn't give me a warning and I just got an unbelievably unhelpful build error -->
 
     <!-- Main Screen -->
-    <string name="app_name" translatable="false">S Pen HID Client</string>
+    <string name="app_name" translatable="false">USB HID Client</string>
     <string name="direct_input">Direct Input</string> <!-- Reused as preference category header -->
+    <string name="keyboard_icon_description">Keyboard. Hold for full keyboard.</string>
+    <string name="open_full_keyboard">Open full keyboard</string>
+    <string name="full_keyboard_title">Full keyboard</string>
+    <string name="full_keyboard_modifier_hint">Tap a modifier, then tap a key to send a shortcut.</string>
+    <string name="full_keyboard_modifier_active">Modifier selected. The next key will use it.</string>
     <string name="manual_input">Manual Input</string> <!-- Reused as preference category header -->
     <string name="touchpad_label">Touchpad</string> <!-- Reused as preference category header -->
     <string name="send">Send</string>
@@ -85,7 +90,7 @@
     <string name="help">Help</string>
 
     <string name="help_faq_q1">How do I use the app?</string>
-    <string name="help_faq_a1">• Touch &amp; S Pen: Interact with the main surface using finger touch or S Pen.\n\n• Keyboard: Tap the keyboard icon in the top bar to type directly to your connected device.</string>
+    <string name="help_faq_a1">• Touch &amp; S Pen: Interact with the main surface using finger touch or S Pen.\n\n• Keyboard: Tap the keyboard icon for the phone keyboard, or hold it to open the full USB keyboard.</string>
 
     <string name="help_faq_spen_title">S Pen Modes</string>
     <string name="help_faq_spen_content">Put the pen near the screen, and hold down the pen\'s button to select a different mode.\n\n• Hover: Cursor tracks the pen in the air. Tapping down performs clicks.\n\n• Mouse: Cursor moves when the pen touches and drags across the surface.\n\n• Hybrid: Absolute digitizer mapping with pressure sensitivity for drawing.</string>
@@ -94,7 +99,7 @@
     <string name="help_faq_touchpad_content">• One finger: Slide to move cursor. Tap to left-click.\n\n• Drag &amp; select: Double tap and hold down on the second tap to drag / select.\n\n• Two fingers: Tap to right-click. Slide up or down to scroll.</string>
 
     <string name="help_faq_q2">Direct Input (Keyboard)</string>
-    <string name="help_faq_a2">Tap the keyboard icon in the top menu bar to open your on-screen keyboard. Keystrokes are sent directly over USB in real time without latency.</string>
+    <string name="help_faq_a2">Tap the keyboard icon to use the phone keyboard. Hold the icon to open a full desktop layout with function, modifier, navigation, number pad, and media keys. Keystrokes are sent directly over USB.</string>
 
     <string name="help_faq_setup_title">Prerequisites &amp; Setup</string>
     <string name="help_faq_setup_content">Connect your phone to your PC via USB. Ensure your device is rooted with USB Gadget (ConfigFS) support. Check the Troubleshooting menu in the top-right corner to verify system health.</string>
@@ -106,7 +111,7 @@
     <string name="onboarding_title">Initial Setup</string>
 
     <string name="onboarding_header">Before you start using the app…</string>
-    <string name="onboarding_notice">Tap the keyboard icon in the top menu bar anytime to open your on-screen keyboard and relay keystrokes in real time.</string>
+    <string name="onboarding_notice">Tap the keyboard icon to use your phone keyboard, or hold it for the full desktop keyboard. Both send keystrokes directly over USB.</string>
     <string name="onboarding_continue_btn">Continue</string>
 
     <!-- Troubleshooting Screen -->

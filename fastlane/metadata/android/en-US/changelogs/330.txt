@@ -1,0 +1,4 @@
+- Added a full desktop USB keyboard opened by holding the keyboard icon
+- Added function, modifier, navigation, number pad, and media keys
+- Renamed the app to Android USB HID Client
+- Changed the application ID to io.github.dotcomdomain.usbhidclient before its first F-Droid publication

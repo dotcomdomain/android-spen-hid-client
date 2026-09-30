@@ -192,7 +192,7 @@ private fun MainTopBar(showTitle: Boolean) {
                 Text(
                     text = buildAnnotatedString {
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
-                            append("S Pen ")
+                            append("USB ")
                         }
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)) {
                             append("HID Client")

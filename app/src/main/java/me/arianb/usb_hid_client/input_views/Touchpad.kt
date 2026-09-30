@@ -51,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import me.arianb.usb_hid_client.MainViewModel
 import me.arianb.usb_hid_client.R
 import me.arianb.usb_hid_client.input_views.touch_input_handlers.MouseInputHandler
@@ -177,6 +179,7 @@ fun LandscapeFloatingKeyboardButton(
     val context = LocalContext.current
     val localView = LocalView.current
     val isImeVisible = WindowInsets.isImeVisible
+    val navigator = LocalNavigator.currentOrThrow
 
     Surface(
         shape = CircleShape,
@@ -191,6 +194,10 @@ fun LandscapeFloatingKeyboardButton(
             .size(46.dp)
             .pointerInput(isImeVisible) {
                 detectTapGestures(
+                    onLongPress = {
+                        hideDirectInputSoftKeyboard(context, localView)
+                        navigator.push(FullKeyboardScreen())
+                    },
                     onTap = {
                         val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
                         if (currentlyActive) {
@@ -216,7 +223,7 @@ fun LandscapeFloatingKeyboardButton(
         ) {
             Icon(
                 painter = painterResource(R.drawable.keyboard),
-                contentDescription = stringResource(R.string.direct_input),
+                contentDescription = stringResource(R.string.keyboard_icon_description),
                 tint = if (isImeVisible) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(24.dp)
             )

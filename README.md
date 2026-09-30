@@ -1,4 +1,4 @@
-# Android S Pen HID Client
+# Android USB HID Client
 
 Use a rooted Android phone as a USB keyboard, mouse, Windows Precision Touchpad, or S Pen input device. The host computer sees standard USB HID devices, so it does not need a companion program.
 
@@ -89,7 +89,7 @@ The current development device is a Samsung Galaxy Note9, model SM-N960F, runnin
 3. Build the `debug` or `release` APK from Android Studio.
 4. Install the APK on the rooted Android device.
 
-The package name is `com.dotcomdomain.android_spen_hid_client`, allowing standalone installation alongside the original upstream app.
+The application ID is `io.github.dotcomdomain.usbhidclient`, allowing standalone installation alongside the original upstream app.
 
 ### Termux on arm64
 
