@@ -6,20 +6,20 @@ SourceCode: https://github.com/dotcomdomain/android-spen-hid-client
 IssueTracker: https://github.com/dotcomdomain/android-spen-hid-client/issues
 Changelog: https://github.com/dotcomdomain/android-spen-hid-client/releases
 
-AutoName: S Pen HID Client
+AutoName: USB HID Client
 
 RepoType: git
 Repo: https://github.com/dotcomdomain/android-spen-hid-client.git
 
 Builds:
-  - versionName: 3.2.0
-    versionCode: 320
-    commit: 818f98208582a01279c3f85376b150f96035f961
+  - versionName: 3.3.0
+    versionCode: 330
+    commit: 44f6e11f352cbf7afddd23e10acd5b02e37dbca5
     subdir: app
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 3.2.0
-CurrentVersionCode: 320
+CurrentVersion: 3.3.0
+CurrentVersionCode: 330
