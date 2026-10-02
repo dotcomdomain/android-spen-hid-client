@@ -8,6 +8,7 @@ plugins {
 
 android {
     namespace = "me.arianb.usb_hid_client"
+    ndkVersion = "28.2.13676358"
     defaultConfig {
         applicationId = "io.github.dotcomdomain.usbhidclient"
 
@@ -17,8 +18,8 @@ android {
         compileSdk = 36
 
         // App Versioning
-        versionCode = 330
-        versionName = "3.3.0"
+        versionCode = 340
+        versionName = "3.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -21,6 +21,7 @@ import me.arianb.usb_hid_client.settings.AppSettings.HideStatusBar
 import me.arianb.usb_hid_client.settings.AppSettings.HideAppTitle
 import me.arianb.usb_hid_client.settings.AppSettings.KeyboardCharacterDevicePath
 import me.arianb.usb_hid_client.settings.AppSettings.MediaKeyPassthrough
+import me.arianb.usb_hid_client.settings.AppSettings.LatchFullKeyboardModifiers
 import me.arianb.usb_hid_client.settings.AppSettings.PreferenceCategory
 import me.arianb.usb_hid_client.settings.AppSettings.PreferenceDivider
 import me.arianb.usb_hid_client.settings.AppSettings.PrecisionTouchpadSensitivity
@@ -77,6 +78,12 @@ fun SettingsPage() {
             title = stringResource(R.string.direct_input),
         ) {
             MediaKeyPassthrough()
+            PreferenceDivider()
+            LatchFullKeyboardModifiers()
+        }
+
+        PreferenceCategory(title = "Voice dictation") {
+            me.arianb.usb_hid_client.dictation.DictationSettings()
         }
 
 
@@ -223,6 +230,15 @@ private object AppSettings {
             title = stringResource(R.string.volume_button_passthrough_title),
             summary = stringResource(R.string.volume_button_passthrough_summary),
             preference = AppPreference.VolumeButtonPassthroughKey
+        )
+    }
+
+    @Composable
+    fun LatchFullKeyboardModifiers() {
+        SwitchPreference(
+            title = stringResource(R.string.latch_full_keyboard_modifiers_title),
+            summary = stringResource(R.string.latch_full_keyboard_modifiers_summary),
+            preference = AppPreference.LatchFullKeyboardModifiers
         )
     }
 

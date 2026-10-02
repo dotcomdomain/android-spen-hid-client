@@ -7,7 +7,8 @@
     <string name="keyboard_icon_description">Keyboard. Hold for full keyboard.</string>
     <string name="open_full_keyboard">Open full keyboard</string>
     <string name="full_keyboard_title">Full keyboard</string>
-    <string name="full_keyboard_modifier_hint">Tap a modifier, then tap a key to send a shortcut.</string>
+    <string name="full_keyboard_modifier_hint">Hold a modifier while pressing another key.</string>
+    <string name="full_keyboard_latched_modifier_hint">Tap a modifier, then tap a key to send a shortcut.</string>
     <string name="full_keyboard_modifier_active">Modifier selected. The next key will use it.</string>
     <string name="manual_input">Manual Input</string> <!-- Reused as preference category header -->
     <string name="touchpad_label">Touchpad</string> <!-- Reused as preference category header -->
@@ -42,6 +43,8 @@
 
     <string name="volume_button_passthrough_title">Volume button passthrough</string>
     <string name="volume_button_passthrough_summary">Control PC volume with phone buttons</string>
+    <string name="latch_full_keyboard_modifiers_title">Tap modifiers to latch</string>
+    <string name="latch_full_keyboard_modifiers_summary">Keep Ctrl, Shift, Alt, or Win active for the next key</string>
 
     <string name="touchpad_loopback_mode_title">Loopback mode</string>
     <string name="touchpad_loopback_mode_summary">Control cursor on phone\'s external display</string>

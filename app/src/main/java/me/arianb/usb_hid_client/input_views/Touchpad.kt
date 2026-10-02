@@ -1,13 +1,12 @@
 package me.arianb.usb_hid_client.input_views
 
 import android.content.res.Configuration
-import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -39,14 +38,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -192,30 +192,24 @@ fun LandscapeFloatingKeyboardButton(
         shadowElevation = 4.dp,
         modifier = modifier
             .size(46.dp)
-            .pointerInput(isImeVisible) {
-                detectTapGestures(
-                    onLongPress = {
+            .clip(CircleShape)
+            .combinedClickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.direct_input),
+                onLongClickLabel = stringResource(R.string.open_full_keyboard),
+                onLongClick = {
+                    hideDirectInputSoftKeyboard(context, localView)
+                    navigator.push(FullKeyboardScreen())
+                },
+                onClick = {
+                    val currentlyActive = isKeyboardActive(localView)
+                    if (currentlyActive) {
                         hideDirectInputSoftKeyboard(context, localView)
-                        navigator.push(FullKeyboardScreen())
-                    },
-                    onTap = {
-                        val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
-                        if (currentlyActive) {
-                            hideDirectInputSoftKeyboard(context, localView)
-                        } else {
-                            Toast.makeText(context, "Double tap to open keyboard", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    onDoubleTap = {
-                        val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
-                        if (currentlyActive) {
-                            hideDirectInputSoftKeyboard(context, localView)
-                        } else {
-                            showDirectInputSoftKeyboard(context, localView)
-                        }
+                    } else {
+                        showDirectInputSoftKeyboard(context, localView)
                     }
-                )
-            }
+                },
+            )
     ) {
         Box(
             contentAlignment = Alignment.Center,

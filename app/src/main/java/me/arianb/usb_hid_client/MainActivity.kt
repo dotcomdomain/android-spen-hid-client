@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,6 +25,8 @@ class MyApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        me.arianb.usb_hid_client.dictation.DictationPreferences.initialize(this)
+
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
             Shell.enableVerboseLogging = true
@@ -40,7 +43,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            Entrypoint()
+            androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                Entrypoint()
+                me.arianb.usb_hid_client.dictation.DictationIndicator()
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (me.arianb.usb_hid_client.dictation.DictationPreferences.options.value.enabled &&
+            androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            me.arianb.usb_hid_client.dictation.DictationService.start(this)
         }
     }
 }

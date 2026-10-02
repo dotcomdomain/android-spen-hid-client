@@ -19,6 +19,8 @@ sealed class AppPreference(val preference: PreferenceKey<*>) {
     data object OnboardingDoneKey : BooleanPreferenceKey("onboarding_done", false)
     data object ClearManualInputKey : BooleanPreferenceKey("clear_manual_input", false)
     data object VolumeButtonPassthroughKey : BooleanPreferenceKey("volume_button_passthrough", false)
+    data object LatchFullKeyboardModifiers :
+        BooleanPreferenceKey("latch_full_keyboard_modifiers", false)
     data object AppThemeKey : ObjectPreferenceKey<AppTheme>(
         "app_theme", AppTheme.System,
         fromStringPreference = {
@@ -103,6 +105,7 @@ data class UserPreferences(
     val isOnboardingDone: Boolean,
     val clearManualInput: Boolean,
     val isVolumeButtonPassthroughEnabled: Boolean,
+    val latchFullKeyboardModifiers: Boolean,
     val appTheme: AppTheme,
     val isDynamicColorEnabled: Boolean,
     val hideStatusBar: Boolean,
@@ -171,6 +174,7 @@ class UserPreferencesRepository private constructor(application: Application) {
                 isOnboardingDone = AppPreference.OnboardingDoneKey.getValue(),
                 clearManualInput = AppPreference.ClearManualInputKey.getValue(),
                 isVolumeButtonPassthroughEnabled = AppPreference.VolumeButtonPassthroughKey.getValue(),
+                latchFullKeyboardModifiers = AppPreference.LatchFullKeyboardModifiers.getValue(),
                 appTheme = AppPreference.AppThemeKey.getValue(),
                 isDynamicColorEnabled = AppPreference.DynamicColorKey.getValue(),
                 hideStatusBar = AppPreference.HideStatusBar.getValue(),

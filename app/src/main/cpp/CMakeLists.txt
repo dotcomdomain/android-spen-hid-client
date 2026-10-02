@@ -41,3 +41,20 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         # List libraries link to the target library
         android
         log)
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
+set(GGML_VULKAN OFF CACHE BOOL "" FORCE)
+set(GGML_CPU_KLEIDIAI OFF CACHE BOOL "" FORCE)
+add_subdirectory(../../../../third_party/whisper.cpp whisper-build)
+foreach(runtime_target whisper ggml ggml-base ggml-cpu)
+    target_compile_options(${runtime_target} PRIVATE -O3)
+endforeach()
+add_library(dictation SHARED dictation.cpp)
+target_compile_features(dictation PRIVATE cxx_std_17)
+target_link_libraries(dictation PRIVATE whisper android log)

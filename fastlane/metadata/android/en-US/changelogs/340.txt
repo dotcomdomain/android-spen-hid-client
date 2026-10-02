@@ -1,0 +1,5 @@
+Improved full keyboard layout, multitouch key holds and modifier settings.
+Fixed keyboard opening and landscape touchpad behavior.
+Added optional offline hold-to-dictate with a separately downloaded Whisper base model.
+Added remappable activation, status indicators and native cancellation.
+Choose replacement, queued or parallel transcription with a limit of 1–5 jobs. Text is sent in recording order.

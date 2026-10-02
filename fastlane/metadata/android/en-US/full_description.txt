@@ -6,6 +6,8 @@
 <li><b>Windows Precision Touchpad (PTP):</b> Multi-touch touchpad emulation supporting smooth 1 to 5 finger gestures, tap-to-click, pinch-to-zoom, two-finger scrolling, and virtual desktop switching.</li>
 <li><b>USB Keyboard &amp; Mouse:</b> Direct keyboard input, scriptable keystrokes, and standard mouse mode with left/right buttons and scroll wheel. Functions even inside your computer's BIOS/UEFI.</li>
 <li><b>Modern Material 3 Interface:</b> Dynamic color theming, configurable display modes (fullscreen, hide status bar, hide app bar), and customizable digitizer settings.</li>
+<li><b>Full Virtual Keyboard:</b> Function keys, navigation keys and multitouch modifier holds, with optional sticky modifiers.</li>
+<li><b>Offline Voice Dictation:</b> An optional, remappable hardware-button hold records speech and types its transcription over USB. Download the Whisper base model separately in Settings. Choose replacement, queued or parallel processing with ordered text delivery. Disabled by default; audio stays on the phone.</li>
 </ul>
 
 <p><b>Requirements:</b></p>

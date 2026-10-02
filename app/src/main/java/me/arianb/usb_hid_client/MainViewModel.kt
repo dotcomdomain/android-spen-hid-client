@@ -230,8 +230,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun addStandardKey(modifier: Byte, key: Byte) =
         keySender.value.addStandardKey(modifier, key)
 
+    fun setStandardKeyState(modifier: Byte, firstKey: Byte, secondKey: Byte = 0) =
+        keySender.value.setStandardKeyState(modifier, firstKey, secondKey)
+
     fun addMediaKey(key: Byte) =
         keySender.value.addMediaKey(key)
+
+    fun setMediaKeyState(key: Byte) =
+        keySender.value.setMediaKeyState(key)
 
     private inline fun <T, R> StateFlow<T>.mapState(
         crossinline transform: (value: T) -> R

@@ -2,6 +2,7 @@ package me.arianb.usb_hid_client.input_views
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.text.InputType
 import android.util.AttributeSet
 import android.view.KeyEvent
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -111,18 +113,18 @@ fun DirectInput(
     )
 }
 
-fun isKeyboardActive(context: Context, view: View): Boolean {
+fun isKeyboardActive(view: View): Boolean {
     val rootInsets = ViewCompat.getRootWindowInsets(view)
     if (rootInsets != null && rootInsets.isVisible(WindowInsetsCompat.Type.ime())) {
         return true
     }
-    if (rootInsets != null && rootInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom > 0) {
-        return true
-    }
-    val etDirectInput = view.rootView.findViewById<DirectInputKeyboardView>(R.id.etDirectInput)
-        ?: view.findViewById(R.id.etDirectInput)
-    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-    return etDirectInput?.isFocused == true && imm?.isAcceptingText == true
+    return rootInsets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom?.let { it > 0 } == true
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 fun showDirectInputSoftKeyboard(context: Context, view: View) {
@@ -132,12 +134,14 @@ fun showDirectInputSoftKeyboard(context: Context, view: View) {
         etDirectInput.isFocusable = true
         etDirectInput.isFocusableInTouchMode = true
         etDirectInput.requestFocus()
-        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        imm?.showSoftInput(etDirectInput, 0)
-        val window = (view.context as? Activity)?.window
-        if (window != null) {
-            val controller = WindowCompat.getInsetsController(window, view)
-            controller.show(WindowInsetsCompat.Type.ime())
+        etDirectInput.post {
+            etDirectInput.requestFocus()
+            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.showSoftInput(etDirectInput, InputMethodManager.SHOW_IMPLICIT)
+            val window = view.context.findActivity()?.window
+            if (window != null) {
+                WindowCompat.getInsetsController(window, etDirectInput).show(WindowInsetsCompat.Type.ime())
+            }
         }
     }
 }
@@ -171,6 +175,7 @@ fun DirectInputIconButton() {
         modifier = Modifier
             .padding(end = 4.dp)
             .size(40.dp)
+            .clip(CircleShape)
             .combinedClickable(
                 role = Role.Button,
                 onClickLabel = stringResource(R.string.direct_input),
@@ -180,7 +185,7 @@ fun DirectInputIconButton() {
                     navigator.push(FullKeyboardScreen())
                 },
                 onClick = {
-                    val currentlyActive = isImeVisible || isKeyboardActive(context, localView)
+                    val currentlyActive = isKeyboardActive(localView)
                     if (currentlyActive) {
                         hideDirectInputSoftKeyboard(context, localView)
                     } else {
