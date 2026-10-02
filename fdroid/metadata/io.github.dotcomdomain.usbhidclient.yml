@@ -23,6 +23,7 @@ Builds:
       - third_party/whisper.cpp/models
       - third_party/whisper.cpp/examples
       - third_party/whisper.cpp/bindings/java
+      - third_party/whisper.cpp/bindings/javascript/package.json
     ndk: r28c
 
 AutoUpdateMode: Version
