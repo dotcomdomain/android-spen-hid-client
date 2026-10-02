@@ -12,14 +12,20 @@ RepoType: git
 Repo: https://github.com/dotcomdomain/android-spen-hid-client.git
 
 Builds:
-  - versionName: 3.3.0
-    versionCode: 330
-    commit: 44f6e11f352cbf7afddd23e10acd5b02e37dbca5
+  - versionName: 3.4.0
+    versionCode: 340
+    commit: 80c08be6c7add42768cc148a5e46b581b92cc076
     subdir: app
+    submodules: true
     gradle:
       - yes
+    rm:
+      - third_party/whisper.cpp/models
+      - third_party/whisper.cpp/examples
+      - third_party/whisper.cpp/bindings/java
+    ndk: r28c
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 3.3.0
-CurrentVersionCode: 330
+CurrentVersion: 3.4.0
+CurrentVersionCode: 340
