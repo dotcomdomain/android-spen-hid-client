@@ -1,0 +1,1 @@
+Fix the touchpad screen and dictation notification titles to use USB Input Bridge.

@@ -184,6 +184,7 @@ private data class NavMenuItem(val screen: Screen, val title: String, val icon: 
 private fun MainTopBar(showTitle: Boolean) {
     val navigator = LocalNavigator.currentOrThrow
     var showDropdownMenu by remember { mutableStateOf(false) }
+    val appName = stringResource(R.string.app_name)
 
     BasicTopBar(
         title = if (showTitle) stringResource(R.string.app_name) else "",
@@ -195,7 +196,7 @@ private fun MainTopBar(showTitle: Boolean) {
                             append("USB ")
                         }
                         withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)) {
-                            append("HID Client")
+                            append(appName.removePrefix("USB "))
                         }
                     },
                     style = MaterialTheme.typography.titleLarge.copy(

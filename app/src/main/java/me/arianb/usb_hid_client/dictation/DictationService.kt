@@ -129,7 +129,7 @@ class DictationService : Service() {
     private fun notification(message: String): Notification {
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(R.drawable.keyboard)
-            .setContentTitle("USB HID dictation").setContentText(message)
+            .setContentTitle("${getString(me.arianb.usb_hid_client.R.string.app_name)} dictation").setContentText(message)
             .setContentIntent(open).setOngoing(true).setSilent(true).build()
     }
 
