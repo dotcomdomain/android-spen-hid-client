@@ -21,7 +21,7 @@ This is a fork of [Arian04/android-hid-client](https://github.com/Arian04/androi
 
 ## Downloads
 
-Download the latest signed release APK from [GitHub Releases](https://github.com/dotcomdomain/android-spen-hid-client/releases/latest).
+Download the latest signed release APK from [GitHub Releases](https://github.com/dotcomdomain/android-spen-hid-client/releases/latest). Choose the asset ending in `-universal.apk`; it supports all four Android architectures and is the reference APK for F-Droid verification.
 
 ## What changed in this fork
 
@@ -104,6 +104,10 @@ The script builds the native library with Termux Clang and passes the Termux `aa
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
+
+### Reproducible releases
+
+Production releases use the standard Linux Android SDK/NDK build and are signed with the developer release key. Termux builds are for local development and do not match the F-Droid reference APK. See [RELEASING.md](RELEASING.md) for the build, signing and verification process.
 
 ## First run
 

@@ -11,6 +11,8 @@ AutoName: USB Input Bridge
 RepoType: git
 Repo: https://github.com/dotcomdomain/android-spen-hid-client.git
 
+Binaries: https://github.com/dotcomdomain/android-spen-hid-client/releases/download/v%v/usb-input-bridge-%v-universal.apk
+
 Builds:
   - versionName: 3.4.2
     versionCode: 342
@@ -25,6 +27,8 @@ Builds:
       - third_party/whisper.cpp/bindings/java
       - third_party/whisper.cpp/bindings/javascript/package.json
     ndk: r28c
+
+AllowedAPKSigningKeys: 667794945847bc72aa382b07f4a788cb930e177f4c404f4b2c6182784fe00adb
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
