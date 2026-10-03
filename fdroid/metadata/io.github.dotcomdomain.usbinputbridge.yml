@@ -6,15 +6,15 @@ SourceCode: https://github.com/dotcomdomain/android-spen-hid-client
 IssueTracker: https://github.com/dotcomdomain/android-spen-hid-client/issues
 Changelog: https://github.com/dotcomdomain/android-spen-hid-client/releases
 
-AutoName: USB HID Client
+AutoName: USB Input Bridge
 
 RepoType: git
 Repo: https://github.com/dotcomdomain/android-spen-hid-client.git
 
 Builds:
-  - versionName: 3.4.0
-    versionCode: 340
-    commit: 80c08be6c7add42768cc148a5e46b581b92cc076
+  - versionName: 3.4.1
+    versionCode: 341
+    commit: 3aaa4296f498cb2271d9f5b3fe74cd59eb5aa922
     subdir: app
     submodules: true
     gradle:
@@ -28,5 +28,5 @@ Builds:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 3.4.0
-CurrentVersionCode: 340
+CurrentVersion: 3.4.1
+CurrentVersionCode: 341
