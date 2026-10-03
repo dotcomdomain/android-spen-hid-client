@@ -9,6 +9,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.arianb.usb_hid_client.hid_utils.CharacterDeviceManager
@@ -53,7 +56,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val keySender: StateFlow<KeySender> = userPreferencesStateFlow
         .mapState {
-            KeySender(it.keyboardCharacterDevicePath)
+            KeySender(it.keyboardCharacterDevicePath, if (it.isLoopbackModeEnabled) application else null)
         }
 
     val touchpadSender: StateFlow<PointerDeviceSender> = userPreferencesStateFlow
@@ -63,7 +66,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             //  settings are therefore mutually exclusive.
             if (it.isLoopbackModeEnabled) {
                 fixCharacterDevicePermissions(UHID.PATH)
-                LoopbackTouchpadSender(TouchpadDevicePath(UHID.PATH))
+                LoopbackTouchpadSender(TouchpadDevicePath(UHID.PATH), application)
             } else if (it.enablePrecisionTouchpad) {
                 TouchpadSender(it.touchpadCharacterDevicePath)
             } else {
@@ -74,6 +77,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val senderFlowList = listOf(keySender, touchpadSender)
 
     init {
+        viewModelScope.launch {
+            userPreferencesStateFlow.map { it.isLoopbackModeEnabled }.distinctUntilChanged().collectLatest { enabled ->
+                if (enabled) {
+                    _uiState.update {
+                        it.copy(missingCharacterDevice = false, isDeviceUnplugged = false,
+                            isCharacterDevicePermissionsBroken = null)
+                    }
+                    try {
+                        coroutineScope {
+                            launch { me.arianb.usb_hid_client.hid_utils.LoopbackRouting.routeBuiltInPen(application, true) }
+                            launch { UHID.prepare(application) }
+                            launch { me.arianb.usb_hid_client.dictation.LoopbackKeyboard.prepare(application) }
+                        }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.e(e, "Loopback initialization failed")
+                    }
+                }
+                if (!enabled) {
+                    me.arianb.usb_hid_client.hid_utils.LoopbackRouting.routeBuiltInPen(application, false)
+                    me.arianb.usb_hid_client.dictation.LoopbackKeyboard.close()
+                    UHID.destroy()
+                }
+            }
+        }
         viewModelScope.launch {
             while (true) {
                 delay(2000)
@@ -132,11 +161,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun recoverDisabledGadget() {
+        if (userPreferencesStateFlow.value.isLoopbackModeEnabled) return
         if (!rootStateHolder.hasRootPermissions()) return
         if (!isRecoveringGadget.compareAndSet(false, true)) return
 
         viewModelScope.launch {
             try {
+                if (userPreferencesStateFlow.value.isLoopbackModeEnabled) return@launch
                 val preferences = GadgetUserPreferences.fromUserPreferences(userPreferencesStateFlow.value)
                 characterDeviceManager.createCharacterDevices(preferences)
                 anyCharacterDeviceMissing()
@@ -210,7 +241,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     @OptIn(ModifiesStateDirectly::class)
     fun characterDeviceMissing(charDevicePath: DevicePath): Boolean {
-        val result = characterDeviceManager.characterDeviceMissing(charDevicePath)
+        val path = if (userPreferencesStateFlow.value.isLoopbackModeEnabled)
+            TouchpadDevicePath(UHID.PATH) else charDevicePath
+        val result = if (userPreferencesStateFlow.value.isLoopbackModeEnabled)
+            java.io.File(UHID.PATH).exists().not()
+        else characterDeviceManager.characterDeviceMissing(path)
 
         _uiState.update { it.copy(missingCharacterDevice = result) }
 
@@ -219,7 +254,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     @OptIn(ModifiesStateDirectly::class)
     fun anyCharacterDeviceMissing(): Boolean {
-        val result = characterDeviceManager.anyCharacterDeviceMissing()
+        val result = if (userPreferencesStateFlow.value.isLoopbackModeEnabled)
+            !java.io.File(UHID.PATH).exists()
+        else characterDeviceManager.anyCharacterDeviceMissing()
 
         _uiState.update { it.copy(missingCharacterDevice = result) }
 

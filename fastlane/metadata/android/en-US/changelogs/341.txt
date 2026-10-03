@@ -1,0 +1,6 @@
+- Renamed this fork to USB Input Bridge with a new launcher and store icon.
+- Pointed in-app source and bug-report links to this fork.
+- Fixed local keyboard, pointer and dictation output in loopback mode.
+- Prevented USB gadget recovery from running in loopback mode.
+- Documented external-display focus setup and optional model downloads from Hugging Face.
+- Changed the package ID to io.github.dotcomdomain.usbinputbridge before initial F-Droid inclusion.

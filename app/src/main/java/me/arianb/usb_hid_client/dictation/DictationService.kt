@@ -133,17 +133,17 @@ class DictationService : Service() {
             .setContentIntent(open).setOngoing(true).setSilent(true).build()
     }
 
-    private fun update(phase: DictationPhase, message: String, progress: Float = 0f, transcript: String = DictationState.status.value.transcript) {
+    private fun update(phase: DictationPhase, message: String, progress: Float = 0f) {
         indicatorTimeout?.cancel()
         val visible = phase in setOf(DictationPhase.RECORDING, DictationPhase.PROCESSING, DictationPhase.SENDING, DictationPhase.ERROR)
         DictationState.status.value = DictationStatus(phase, message, progress,
-            DictationPreferences.modelFile(this).isFile, transcript, indicatorVisible = visible)
+            DictationPreferences.modelFile(this).isFile, indicatorVisible = visible)
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(42, notification(message))
         showOverlay(if (visible) message else null)
         if (phase == DictationPhase.ERROR) {
             indicatorTimeout = scope.launch {
                 delay(2000)
-                // Keep the error and transcript in Settings without covering the touchpad.
+                // Hide the transient error indicator without covering the touchpad.
                 DictationState.status.value = DictationState.status.value.copy(indicatorVisible = false)
                 showOverlay(null)
             }
@@ -228,12 +228,12 @@ class DictationService : Service() {
                 refreshSessions()
                 predecessor?.await()
                 session.phase = DictationPhase.SENDING
-                session.message = "Typing to connected device…"
-                DictationState.status.value = DictationState.status.value.copy(transcript = text)
+                session.message = if (UserPreferencesRepository.getInstance(application).userPreferencesFlow.value.isLoopbackModeEnabled)
+                    "Typing on phone…" else "Typing to connected device…"
                 refreshSessions()
-                withContext(Dispatchers.IO) { typing.withLock { sendText(text) } }
-                terminalMessage = "Sent transcription"
-                timber.log.Timber.i("Dictation %d sent once", session.request)
+                val sent = withContext(Dispatchers.IO) { typing.withLock { sendText(text) } }
+                terminalMessage = if (sent) "Sent transcription" else "Dictation discarded: no USB host connected"
+                timber.log.Timber.i("Dictation %d delivery completed: %s", session.request, sent)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -327,32 +327,41 @@ class DictationService : Service() {
         return Shell.cmd("cat /sys/class/udc/*/state").exec().out.any { it.trim() == "configured" }
     }
 
-    private suspend fun sendText(text: String) {
-        check(usbConnected()) { "No USB host connected. Transcript kept in Settings." }
+    private suspend fun sendText(text: String): Boolean {
+        val preferences = UserPreferencesRepository.getInstance(application).userPreferencesFlow.value
+        val loopback = preferences.isLoopbackModeEnabled
+        if (!loopback && !usbConnected()) return false
         // HID characters assume a US keyboard layout. Convert common punctuation
         // and decomposable accents rather than silently dropping characters.
         val normalized = Normalizer.normalize(text.replace('’', '\'').replace('‘', '\'')
             .replace('“', '"').replace('”', '"').replace('—', '-').replace('–', '-').replace("…", "..."), Normalizer.Form.NFD)
             .replace(Regex("\\p{M}+"), "")
         val reports = normalized.map { char ->
-            KeyCodeTranslation.keyCharToScanCodes(char) ?: error("Cannot type '$char' through US HID. Transcript kept in Settings.")
+            KeyCodeTranslation.keyCharToScanCodes(char) ?: error("Cannot type '$char' through US HID.")
         }
-        val path = UserPreferencesRepository.getInstance(application).userPreferencesFlow.value.keyboardCharacterDevicePath.path
-        val output = openKeyboard(path)
+        val local = if (loopback) LoopbackKeyboard.open(application) else null
+        val output = if (loopback) null else openKeyboard(preferences.keyboardCharacterDevicePath.path)
+        suspend fun report(bytes: ByteArray) {
+            if (local != null) local.send(bytes) else writeReport(requireNotNull(output), bytes)
+        }
         try {
                 for ((index, codes) in reports.withIndex()) {
                     val (modifier, key) = codes
                     currentCoroutineContext().ensureActive()
-                    if (index % 32 == 0) check(usbConnected()) { "USB disconnected during typing. Transcript kept in Settings." }
-                    writeReport(output, byteArrayOf(1, modifier, 0, key, 0)); delay(8)
-                    writeReport(output, byteArrayOf(1, 0, 0, 0, 0)); delay(8)
+                    if (!loopback && index % 32 == 0) check(usbConnected()) { "USB disconnected during typing." }
+                    report(byteArrayOf(1, modifier, 0, key, 0)); delay(8)
+                    report(byteArrayOf(1, 0, 0, 0, 0)); delay(8)
                 }
         } finally {
             // Release even on cancellation. The nonblocking endpoint bounds this
             // cleanup, preventing a held key from repeating while USB is stalled.
-            withContext(NonCancellable) { runCatching { writeReport(output, byteArrayOf(1, 0, 0, 0, 0)) } }
-            runCatching { Os.close(output) }
+            withContext(NonCancellable) { runCatching { report(byteArrayOf(1, 0, 0, 0, 0)) } }
+            withContext(NonCancellable) {
+                local?.close()
+                output?.let { runCatching { Os.close(it) } }
+            }
         }
+        return true
     }
 
     private suspend fun writeReport(output: FileDescriptor, report: ByteArray) {
@@ -360,11 +369,11 @@ class DictationService : Service() {
         while (true) {
             currentCoroutineContext().ensureActive()
             try {
-                check(Os.write(output, report, 0, report.size) == report.size) { "Incomplete USB keyboard report" }
+                check(Os.write(output, report, 0, report.size) == report.size) { "Incomplete keyboard report" }
                 return
             } catch (error: ErrnoException) {
-                if (error.errno != OsConstants.EAGAIN) throw IOException("USB typing interrupted. Transcript kept in Settings.", error)
-                if (SystemClock.elapsedRealtime() >= deadline) throw IOException("USB keyboard stopped accepting input. Transcript kept in Settings.", error)
+                if (error.errno != OsConstants.EAGAIN) throw IOException("Keyboard input interrupted.", error)
+                if (SystemClock.elapsedRealtime() >= deadline) throw IOException("Keyboard stopped accepting input.", error)
                 delay(4)
             }
         }
@@ -382,7 +391,7 @@ class DictationService : Service() {
                 val errno = error.errno
                 if (errno != OsConstants.ENXIO && errno != OsConstants.ENODEV && errno != OsConstants.ENOENT) throw error
                 if (SystemClock.elapsedRealtime() >= deadline || !usbConnected()) {
-                    throw IOException("USB keyboard unavailable. Reconnect USB or recreate USB HID. Transcript kept in Settings.", error)
+                    throw IOException("USB keyboard unavailable. Reconnect USB or recreate USB HID.", error)
                 }
                 delay(100)
             }

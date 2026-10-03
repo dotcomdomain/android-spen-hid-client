@@ -48,20 +48,17 @@ import me.arianb.usb_hid_client.settings.SettingsViewModel
 import timber.log.Timber
 
 class DirectInputKeyboardView : AppCompatEditText {
-    private lateinit var keySender: KeySender
-    private lateinit var myInputConnection: MyInputConnection
+    private var keySender: KeySender? = null
+    private var myInputConnection: MyInputConnection? = null
 
     constructor(context: Context) : super(context)
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
-    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection {
+    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
         Timber.i("onCreateInputConnection() called")
-        if (keySender == null) {
-            Timber.wtf("KEY SENDER IS NULL, SOMETHING IS TERRIBLY WRONG")
-        }
-        myInputConnection = MyInputConnection(keySender, this, false)
-        return myInputConnection
+        val sender = keySender ?: return super.onCreateInputConnection(outAttrs)
+        return MyInputConnection(sender, this, false).also { myInputConnection = it }
     }
 
     fun sendKeyEvent(event: KeyEvent): Boolean {
@@ -70,6 +67,7 @@ class DirectInputKeyboardView : AppCompatEditText {
 
     fun setKeySender(keySender: KeySender) {
         this.keySender = keySender
+        myInputConnection = MyInputConnection(keySender, this, false)
     }
 }
 
@@ -97,6 +95,8 @@ fun DirectInput(
             // As another note, this key listener seems to be triggered all the time when the key is sent from a
             // hardware keyboard (during admittedly limited testing).
             etDirectInput.setOnKeyListener { _, keyCode, event ->
+                // Local output must never be forwarded back into the HID sender.
+                if (event.device?.name?.startsWith("USB HID ") == true) return@setOnKeyListener false
                 Timber.d("OnKeyListener received KeyEvent: %s", event.toString())
                 // If key is a media key and user doesn't want us to pass it through, then just
                 // ignore it and let the system handle it normally. Otherwise, send it.

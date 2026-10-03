@@ -4,8 +4,12 @@ This optional feature is disabled by default. In Settings, download the model,
 grant microphone permission, and enable Voice transcription. On this Note9 the
 default trigger is the Bixby button: `gpio_keys`, Linux `EV_KEY` type 1, code 703.
 Hold to record, then release to transcribe and type to the connected USB host.
-The host must use a US keyboard layout. Unsupported characters leave the full
-transcript available in Settings rather than silently dropping part of it.
+With loopback mode enabled, dictation uses a local HID keyboard. On Android 15
+and later it targets an active external display, or the built-in display when
+none is attached. Select a text field on that display before dictating. The receiving device must use
+a US keyboard layout. Unsupported characters produce an error before typing.
+With loopback disabled and no USB host connected, completed dictation is discarded.
+Transcripts are not retained in Settings or retried when a device reconnects.
 
 The app records mono 16 kHz PCM into memory, caps recording at five minutes,
 ignores key repeat, and sends each recording only once. Holding the activation
@@ -21,11 +25,13 @@ jobs divide CPU time and need more inference-buffer memory. The default is
 queued decoding; the stored parallel limit defaults to two. Already typed
 characters cannot be recalled. Native inference uses
 an abort callback, a duration-based time limit, and one greedy decoding pass
-without temperature fallback. Per-recording state prevents a cancelled operation
+without temperature fallback or a second audio pass. Timestamp boundaries remain
+enabled so phrases can end at their audio boundaries.
+Per-recording state prevents a cancelled operation
 from stopping a newer recording. Nonblocking HID writes have bounded waits and
 attempt to release keys when cancelled. Audio
-is discarded after inference. The latest text remains in process memory for
-inspection if the host disconnects. It is never queued for a later USB host.
+is discarded after inference. Completed text is discarded after delivery or
+when no USB host is connected. It is never queued for a later USB host.
 
 The foreground service provides a notification and the app shows a status pill.
 Grant the overlay permission in Settings to show the pill over other apps.
@@ -35,6 +41,19 @@ in Settings. Opening a temporarily unavailable HID keyboard retries for up to
 two seconds before any text is sent, so this retry cannot duplicate typed text.
 Android's microphone privacy indicator remains active during recording.
 After an OS force-stop, open the app to resume an enabled input listener.
+
+## Local keyboard and pointer routing
+
+Loopback uses separate local HID devices for the keyboard, precision touchpad,
+relative mouse, and absolute pen. They answer kernel feature requests during
+registration. The keyboard is prepared when loopback starts; direct-input views
+ignore these devices to prevent output from being forwarded back into the app.
+Input connections also handle key events safely before the software keyboard opens.
+
+On the Note9 running Android 16, root display associations keep the built-in
+S Pen on the phone while routing generated pointer input to the external display.
+The absolute pen descriptor matches that display's aspect ratio, avoiding a
+portrait coordinate range that pushes the cursor beyond the monitor's bottom edge.
 
 ## Raw input mapping
 

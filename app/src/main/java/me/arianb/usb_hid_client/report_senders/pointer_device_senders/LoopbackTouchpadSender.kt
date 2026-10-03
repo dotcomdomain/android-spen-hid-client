@@ -4,10 +4,11 @@ import me.arianb.usb_hid_client.hid_utils.TouchpadDevicePath
 import me.arianb.usb_hid_client.hid_utils.UHID
 
 class LoopbackTouchpadSender(
-    touchpadDevicePath: TouchpadDevicePath
+    touchpadDevicePath: TouchpadDevicePath,
+    private val application: android.app.Application,
 ) : TouchpadSender(
     touchpadDevicePath
 ) {
-    override fun sendReport(report: ByteArray) =
-        UHID.sendHidEvent(report)
+    override suspend fun sendReport(report: ByteArray) =
+        UHID.sendHidEvent(application, report)
 }

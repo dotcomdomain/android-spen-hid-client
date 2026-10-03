@@ -49,7 +49,6 @@ data class DictationStatus(
     val message: String = "Ready",
     val progress: Float = 0f,
     val modelReady: Boolean = false,
-    val transcript: String = "",
     val indicatorVisible: Boolean = false,
     val overlayVisible: Boolean = false,
 )

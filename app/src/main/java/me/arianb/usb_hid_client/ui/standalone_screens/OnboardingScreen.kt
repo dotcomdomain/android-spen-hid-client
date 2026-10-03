@@ -91,7 +91,7 @@ fun OnboardingPage() {
                         Icon(
                             painter = painterResource(R.drawable.ic_launcher_foreground),
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = androidx.compose.ui.graphics.Color.Unspecified,
                             modifier = Modifier.size(56.dp)
                         )
                     }

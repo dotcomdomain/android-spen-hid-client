@@ -19,6 +19,7 @@ class MyInputConnection(
             Timber.w("input connection received null KeyEvent")
             return false
         }
+        if (event.device?.name?.startsWith("USB HID ") == true) return false
         Timber.d("input connection received KeyEvent: %s", event.toString())
 
         val keyCode = event.keyCode

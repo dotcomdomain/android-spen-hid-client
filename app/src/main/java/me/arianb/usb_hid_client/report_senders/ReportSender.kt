@@ -5,10 +5,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import android.os.SystemClock
+import android.system.Os
+import android.system.OsConstants
+import android.system.ErrnoException
 import me.arianb.usb_hid_client.hid_utils.DevicePath
 import timber.log.Timber
 import java.io.FileNotFoundException
-import java.io.FileOutputStream
 import java.io.IOException
 
 abstract class ReportSender(
@@ -47,15 +52,37 @@ abstract class ReportSender(
         reportsChannel.trySend(report)
     }
 
-    open fun sendReport(report: ByteArray) {
+    open suspend fun sendReport(report: ByteArray) {
         writeBytes(report)
     }
 
     // Writes HID report to character device
     @Throws(IOException::class, FileNotFoundException::class)
-    fun writeBytes(report: ByteArray) {
-        FileOutputStream(characterDevicePath.path).use { outputStream ->
-            outputStream.write(report)
+    suspend fun writeBytes(report: ByteArray) {
+        currentCoroutineContext().ensureActive()
+        val fd = try {
+            Os.open(characterDevicePath.path, OsConstants.O_WRONLY or OsConstants.O_NONBLOCK or OsConstants.O_CLOEXEC, 0)
+        } catch (error: ErrnoException) {
+            throw FileNotFoundException("${characterDevicePath.path}: ${error.message}").apply { initCause(error) }
+        }
+        try {
+            val deadline = SystemClock.elapsedRealtime() + 1000
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                try {
+                    if (Os.write(fd, report, 0, report.size) != report.size)
+                        throw IOException("Incomplete HID report")
+                    return
+                } catch (error: ErrnoException) {
+                    if (error.errno != OsConstants.EAGAIN)
+                        throw IOException("${characterDevicePath.path}: ${error.message}", error)
+                    if (SystemClock.elapsedRealtime() >= deadline)
+                        throw IOException("HID endpoint stopped accepting reports: ${characterDevicePath.path}")
+                    delay(4)
+                }
+            }
+        } finally {
+            runCatching { Os.close(fd) }
         }
     }
 }

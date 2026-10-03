@@ -7,7 +7,7 @@
 <li><b>USB Keyboard &amp; Mouse:</b> Direct keyboard input, scriptable keystrokes, and standard mouse mode with left/right buttons and scroll wheel. Functions even inside your computer's BIOS/UEFI.</li>
 <li><b>Modern Material 3 Interface:</b> Dynamic color theming, configurable display modes (fullscreen, hide status bar, hide app bar), and customizable digitizer settings.</li>
 <li><b>Full Virtual Keyboard:</b> Function keys, navigation keys and multitouch modifier holds, with optional sticky modifiers.</li>
-<li><b>Offline Voice Dictation:</b> An optional, remappable hardware-button hold records speech and types its transcription over USB. Download the Whisper base model separately in Settings. Choose replacement, queued or parallel processing with ordered text delivery. Disabled by default; audio stays on the phone.</li>
+<li><b>Offline Voice Dictation:</b> An optional, remappable hardware-button hold records speech and types its transcription over USB. Download the Whisper base model separately from Hugging Face in Settings. Choose replacement, queued or parallel processing with ordered text delivery. Disabled by default; audio stays on the phone.</li>
 </ul>
 
 <p><b>Requirements:</b></p>
@@ -17,3 +17,5 @@
 </ul>
 
 <p>For more details on setup, custom scripts, and troubleshooting, visit the project repository on GitHub.</p>
+
+<p>This app is a fork of Arian04/android-hid-client, with added S Pen input, Windows precision touchpad support, a full virtual keyboard and optional offline voice dictation. Source code and bug reports for this fork are available at <a href="https://github.com/dotcomdomain/android-spen-hid-client">its project repository</a>.</p>

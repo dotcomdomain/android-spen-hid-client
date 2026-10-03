@@ -9,6 +9,13 @@
 #include <android/log.h>
 #include "uhid.h"
 
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_me_arianb_usb_1hid_1client_hid_1utils_UHIDKt_getTouchpadDescriptor(JNIEnv *env, jclass) {
+    jbyteArray result = env->NewByteArray(sizeof(rdesc));
+    env->SetByteArrayRegion(result, 0, sizeof(rdesc), reinterpret_cast<const jbyte *>(rdesc));
+    return result;
+}
+
 // Do not forget to dynamically load the C++ library into your application.
 //
 // For instance,
@@ -108,14 +115,14 @@ Java_me_arianb_usb_1hid_1client_hid_1utils_UHIDKt_createDevice(JNIEnv *env, jcla
     env->ReleaseStringUTFChars(jpath, path);
     if (fd < 0) {
         android_log(ANDROID_LOG_ERROR, "Cannot open uhid-cdev: %m");
-        return EXIT_FAILURE;
+        return -errno;
     }
 
     android_log(ANDROID_LOG_ERROR, "Create uhid device");
     ret = create(fd);
     if (ret) {
         close(fd);
-        return EXIT_FAILURE;
+        return ret;
     }
 
     return fd;

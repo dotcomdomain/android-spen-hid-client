@@ -12,6 +12,15 @@
 #include <condition_variable>
 #include <array>
 
+static std::string decoded_text(whisper_state *state) {
+    std::string text;
+    for (int i = 0; i < whisper_full_n_segments_from_state(state); ++i) {
+        if (whisper_full_get_segment_no_speech_prob_from_state(state, i) < 0.6f)
+            text += whisper_full_get_segment_text_from_state(state, i);
+    }
+    return text;
+}
+
 static std::mutex guard;
 struct Model {
     whisper_context *context;
@@ -162,14 +171,16 @@ Java_me_arianb_usb_1hid_1client_dictation_WhisperEngine_transcribeNative(
     params.no_context = true;
     // Short dictations need not encode a full 30 seconds of padded silence.
     params.audio_ctx = std::min(1500, std::max(256, static_cast<int>((samples.size() + 319) / 320) + 64));
-    params.no_timestamps = true;
-    params.single_segment = true;
+    // Timestamp tokens let the decoder end a phrase at its audio boundary.
+    // Forcing one timestamp-free segment can continue it into padded silence.
+    params.no_timestamps = false;
+    params.single_segment = false;
     // One deterministic pass. Temperature fallback can run several full decodes
     // on noisy recordings and produce repeated/hallucinated phrases.
     params.temperature = 0;
     params.temperature_inc = 0;
     params.greedy.best_of = 1;
-    params.max_tokens = std::clamp(static_cast<int>(std::min<size_t>(samples.size(), 16000 * 30) / 1333) + 16, 32, 448);
+    params.max_tokens = 0;
     params.abort_callback = abort_inference;
     params.abort_callback_user_data = &request;
     params.encoder_begin_callback = [](whisper_context *, whisper_state *, void *data) { return !abort_inference(data); };
@@ -186,11 +197,7 @@ Java_me_arianb_usb_1hid_1client_dictation_WhisperEngine_transcribeNative(
     if (result != 0) {
         fail(env, "Whisper inference failed."); return nullptr;
     }
-    std::string text;
-    for (int i = 0; i < whisper_full_n_segments_from_state(state); ++i) {
-        if (whisper_full_get_segment_no_speech_prob_from_state(state, i) < 0.6f)
-            text += whisper_full_get_segment_text_from_state(state, i);
-    }
+    std::string text = decoded_text(state);
     // Decode real UTF-8 through Java rather than JNI's modified UTF-8.
     auto bytes = env->NewByteArray(text.size());
     env->SetByteArrayRegion(bytes, 0, text.size(), reinterpret_cast<const jbyte *>(text.data()));

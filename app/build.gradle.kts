@@ -10,7 +10,7 @@ android {
     namespace = "me.arianb.usb_hid_client"
     ndkVersion = "28.2.13676358"
     defaultConfig {
-        applicationId = "io.github.dotcomdomain.usbhidclient"
+        applicationId = "io.github.dotcomdomain.usbinputbridge"
 
         // SDK support
         minSdk = 26
@@ -18,8 +18,8 @@ android {
         compileSdk = 36
 
         // App Versioning
-        versionCode = 340
-        versionName = "3.4.0"
+        versionCode = 341
+        versionName = "3.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

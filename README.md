@@ -1,4 +1,4 @@
-# Android USB HID Client
+# USB Input Bridge
 
 Use a rooted Android phone as a USB keyboard, mouse, Windows Precision Touchpad, or S Pen input device. The host computer sees standard USB HID devices, so it does not need a companion program.
 
@@ -89,7 +89,7 @@ The current development device is a Samsung Galaxy Note9, model SM-N960F, runnin
 3. Build the `debug` or `release` APK from Android Studio.
 4. Install the APK on the rooted Android device.
 
-The application ID is `io.github.dotcomdomain.usbhidclient`, allowing standalone installation alongside the original upstream app.
+The application ID is `io.github.dotcomdomain.usbinputbridge`, allowing standalone installation alongside the original upstream app.
 
 ### Termux on arm64
 
@@ -115,6 +115,38 @@ app/build/outputs/apk/debug/app-debug.apk
 Changing the HID report descriptor requires the USB gadget to disconnect and enumerate again. Wired ADB will briefly disconnect during that operation.
 
 ## General device compatibility
+
+### Loopback with an external desktop display
+
+On the development Note9, Android's default global window focus makes touching
+the phone unfocus the desktop app, and desktop input can dismiss the phone's
+software keyboard. Independent display focus is configured with a static overlay,
+`io.github.dotcomdomain.usbhid.displayfocus.rro`, installed as
+`/vendor/overlay/UsbHidDisplayFocus.apk`. It sets only
+`android:bool/config_perDisplayFocusEnabled` to `true`. Shell-fabricated overlays
+were removed at startup on this ROM, so they are unsuitable for this setting.
+
+Android reads the focus configuration at startup, so reboot after changing it.
+To undo the change, remove that APK from the vendor partition and reboot.
+This is device configuration and is not installed by the APK.
+
+Loopback creates a virtual hardware keyboard. To keep the phone's software
+keyboard available, enable "Show on-screen keyboard" under Android's physical
+keyboard settings, or use:
+
+```sh
+settings put secure show_ime_with_hard_keyboard 1
+```
+
+Android's native touchpad tap-dragging is also disabled by default. Enable it with:
+
+```sh
+settings put system touchpad_tap_dragging 1
+```
+
+Tap once, then hold the second touch and move to drag. Setting the value back to
+`0` disables tap-dragging. These commands describe the Android 16 development
+device; other ROMs may have different defaults or lack these settings.
 
 Keyboard and standard mouse output are the most portable features. Precision Touchpad support uses standard HID reports but requires a host that understands the protocol. S Pen support also works with another active stylus if its Android driver reports stylus hover, contact, distance, and side button events.
 

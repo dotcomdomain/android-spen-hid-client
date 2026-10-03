@@ -3,7 +3,8 @@ package me.arianb.usb_hid_client.report_senders
 import me.arianb.usb_hid_client.hid_utils.KeyboardDevicePath
 
 class KeySender(
-    keyboardDevicePath: KeyboardDevicePath
+    keyboardDevicePath: KeyboardDevicePath,
+    private val localApplication: android.app.Application? = null,
 ) : ReportSender(
     keyboardDevicePath
 ) {
@@ -27,19 +28,25 @@ class KeySender(
 
     // Every time we send a report, we only send the "key-down" event. This method will automatically send the "key-up"
     // event right afterward
-    override fun sendReport(report: ByteArray) {
+    override suspend fun sendReport(report: ByteArray) {
         if (report.lastOrNull() == STATE_REPORT_MARKER) {
-            writeBytes(report.copyOf(report.size - 1))
+            deliver(report.copyOf(report.size - 1))
             return
         }
 
         // Send "key-down" report
-        writeBytes(report)
+        deliver(report)
 
         // Send "key-up" report of all zeroes (preserving report ID) to release
         val releaseReport = ByteArray(report.size)
         releaseReport[0] = report[0]
-        writeBytes(releaseReport)
+        deliver(releaseReport)
+    }
+
+    private suspend fun deliver(report: ByteArray) {
+        val application = localApplication
+        if (application != null) me.arianb.usb_hid_client.dictation.LoopbackKeyboard.send(application, report)
+        else writeBytes(report)
     }
 
     companion object {

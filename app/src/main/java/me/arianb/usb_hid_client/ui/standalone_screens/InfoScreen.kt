@@ -84,7 +84,7 @@ fun InfoPage() {
                         Icon(
                             painter = painterResource(R.drawable.ic_launcher_foreground),
                             contentDescription = stringResource(R.string.info_icon_description),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = androidx.compose.ui.graphics.Color.Unspecified,
                             modifier = Modifier.size(64.dp)
                         )
                     }

@@ -2,7 +2,7 @@
     <!-- Note: Remember to escape quotes, I forgot one time and Android Studio didn't give me a warning and I just got an unbelievably unhelpful build error -->
 
     <!-- Main Screen -->
-    <string name="app_name" translatable="false">USB HID Client</string>
+    <string name="app_name" translatable="false">USB Input Bridge</string>
     <string name="direct_input">Direct Input</string> <!-- Reused as preference category header -->
     <string name="keyboard_icon_description">Keyboard. Hold for full keyboard.</string>
     <string name="open_full_keyboard">Open full keyboard</string>
@@ -47,7 +47,7 @@
     <string name="latch_full_keyboard_modifiers_summary">Keep Ctrl, Shift, Alt, or Win active for the next key</string>
 
     <string name="touchpad_loopback_mode_title">Loopback mode</string>
-    <string name="touchpad_loopback_mode_summary">Control cursor on phone\'s external display</string>
+    <string name="touchpad_loopback_mode_summary">Control the phone\'s cursor and send dictation to its focused text field</string>
 
     <string name="touchpad_fullscreen_in_landscape_title">Fullscreen touchpad in landscape</string>
     <string name="touchpad_fullscreen_in_landscape_summary">Expand touchpad surface in landscape</string>
@@ -82,12 +82,12 @@
     <!-- Info ("About") Screen -->
     <string name="info">About</string>
 
-    <string name="info_icon_description">App icon (Keyboard)</string>
+    <string name="info_icon_description">App icon (USB, keyboard and mouse)</string>
     <string name="info_description">This app allows you to use your phone to act as a USB keyboard and mouse without
         requiring any software on the connected device, allowing it to even work in the BIOS/UEFI of the connected
         device!
     </string>
-    <string name="info_source_code_url" translatable="false">https://github.com/Arian04/android-hid-client</string>
+    <string name="info_source_code_url" translatable="false">https://github.com/dotcomdomain/android-spen-hid-client</string>
 
     <!-- Help Screen -->
     <string name="help">Help</string>
@@ -108,7 +108,7 @@
     <string name="help_faq_setup_content">Connect your phone to your PC via USB. Ensure your device is rooted with USB Gadget (ConfigFS) support. Check the Troubleshooting menu in the top-right corner to verify system health.</string>
 
     <string name="help_faq_q5">Feedback &amp; Bug Reports</string>
-    <string name="help_faq_a5">You can submit bug reports and feature requests on <a href="https://github.com/Arian04/android-hid-client/issues">GitHub</a>.</string>
+    <string name="help_faq_a5">You can submit bug reports and feature requests on <a href="https://github.com/dotcomdomain/android-spen-hid-client/issues">GitHub</a>.</string>
 
     <!-- Onboarding Screen -->
     <string name="onboarding_title">Initial Setup</string>
