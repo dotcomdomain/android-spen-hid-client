@@ -46,8 +46,15 @@
     <string name="latch_full_keyboard_modifiers_title">Tap modifiers to latch</string>
     <string name="latch_full_keyboard_modifiers_summary">Keep Ctrl, Shift, Alt, or Win active for the next key</string>
 
-    <string name="touchpad_loopback_mode_title">Loopback mode</string>
-    <string name="touchpad_loopback_mode_summary">Control the phone\'s cursor and send dictation to its focused text field</string>
+    <string name="output_header">Output</string>
+    <string name="pointer_output_title">Mouse, touchpad and S Pen</string>
+    <string name="keyboard_output_title">Keyboard and dictation</string>
+    <string name="output_target_usb">Computer over USB</string>
+    <string name="output_target_loopback">This phone (loopback)</string>
+    <string name="output_target_auto">Automatic</string>
+    <string name="output_target_auto_now_usb">Automatic · USB host connected, sending to computer</string>
+    <string name="output_target_auto_now_loopback">Automatic · No USB host, sending to this phone</string>
+    <string name="output_target_auto_checking">Automatic · Checking USB host…</string>
 
     <string name="touchpad_fullscreen_in_landscape_title">Fullscreen touchpad in landscape</string>
     <string name="touchpad_fullscreen_in_landscape_summary">Expand touchpad surface in landscape</string>

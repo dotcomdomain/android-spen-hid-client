@@ -39,7 +39,16 @@ sealed class AppPreference(val preference: PreferenceKey<*>) {
     data object DynamicColorKey : BooleanPreferenceKey("dynamic_color", false)
     data object HideStatusBar : BooleanPreferenceKey("hide_status_bar", false)
     data object HideAppTitle : BooleanPreferenceKey("hide_app_title", false)
-    data object LoopbackMode : BooleanPreferenceKey("loopback_mode", false)
+    data object KeyboardLoopbackMode : ObjectPreferenceKey<LoopbackSetting>(
+        "keyboard_loopback_mode", LoopbackSetting.Usb,
+        fromStringPreference = { LoopbackSetting.fromKey(it) },
+        toStringPreference = { it.key }
+    )
+    data object PointerLoopbackMode : ObjectPreferenceKey<LoopbackSetting>(
+        "pointer_loopback_mode", LoopbackSetting.Usb,
+        fromStringPreference = { LoopbackSetting.fromKey(it) },
+        toStringPreference = { it.key }
+    )
     data object ExperimentalMode : BooleanPreferenceKey("experimental_mode", false)
     data object TouchpadFullscreenInLandscape : BooleanPreferenceKey("touchpad_fullscreen_in_landscape", false)
     data object UsbGadgetPathPref : ObjectPreferenceKey<UsbGadgetPath>(
@@ -101,6 +110,20 @@ sealed class AppTheme(key: String, @StringRes id: Int) : SealedString(key, id) {
     }
 }
 
+/** Where keyboard or pointer reports go: the USB host, this phone (UHID loopback), or whichever is available. */
+sealed class LoopbackSetting(key: String, @StringRes id: Int) : SealedString(key, id) {
+    data object Usb : LoopbackSetting("usb", R.string.output_target_usb)
+    data object Loopback : LoopbackSetting("loopback", R.string.output_target_loopback)
+    data object Auto : LoopbackSetting("auto", R.string.output_target_auto)
+
+    companion object {
+        val values: List<LoopbackSetting>
+            get() = listOf(Usb, Loopback, Auto)
+
+        fun fromKey(key: String): LoopbackSetting = values.firstOrNull { it.key == key } ?: Usb
+    }
+}
+
 data class UserPreferences(
     val isOnboardingDone: Boolean,
     val clearManualInput: Boolean,
@@ -110,7 +133,8 @@ data class UserPreferences(
     val isDynamicColorEnabled: Boolean,
     val hideStatusBar: Boolean,
     val hideAppTitle: Boolean,
-    val isLoopbackModeEnabled: Boolean,
+    val keyboardLoopback: LoopbackSetting,
+    val pointerLoopback: LoopbackSetting,
     val isTouchpadFullscreenInLandscape: Boolean,
     val isExperimentalModeEnabled: Boolean,
     val usbGadgetPath: UsbGadgetPath,
@@ -159,6 +183,15 @@ class UserPreferencesRepository private constructor(application: Application) {
                 AppPreference.SpenHoverRange.getValue(sharedPreferences)
             )
         }
+        // Split the old single loopback switch into separate keyboard and pointer settings.
+        if (sharedPreferences.contains(LEGACY_LOOPBACK_KEY)) {
+            val legacy = if (sharedPreferences.getBoolean(LEGACY_LOOPBACK_KEY, false))
+                LoopbackSetting.Loopback else LoopbackSetting.Usb
+            for (key in listOf(AppPreference.KeyboardLoopbackMode, AppPreference.PointerLoopbackMode)) {
+                if (!sharedPreferences.contains(key.key)) key.setValue(sharedPreferences, legacy)
+            }
+            sharedPreferences.edit().remove(LEGACY_LOOPBACK_KEY).apply()
+        }
     }
 
     private val _userPreferencesFlow = MutableStateFlow(userPreferences)
@@ -179,7 +212,8 @@ class UserPreferencesRepository private constructor(application: Application) {
                 isDynamicColorEnabled = AppPreference.DynamicColorKey.getValue(),
                 hideStatusBar = AppPreference.HideStatusBar.getValue(),
                 hideAppTitle = AppPreference.HideAppTitle.getValue(),
-                isLoopbackModeEnabled = AppPreference.LoopbackMode.getValue(),
+                keyboardLoopback = AppPreference.KeyboardLoopbackMode.getValue(),
+                pointerLoopback = AppPreference.PointerLoopbackMode.getValue(),
                 isTouchpadFullscreenInLandscape = AppPreference.TouchpadFullscreenInLandscape.getValue(),
                 isExperimentalModeEnabled = AppPreference.ExperimentalMode.getValue(),
                 usbGadgetPath = AppPreference.UsbGadgetPathPref.getValue(),
@@ -213,6 +247,8 @@ class UserPreferencesRepository private constructor(application: Application) {
     }
 
     companion object {
+        private const val LEGACY_LOOPBACK_KEY = "loopback_mode"
+
         @Volatile
         private var INSTANCE: UserPreferencesRepository? = null
 

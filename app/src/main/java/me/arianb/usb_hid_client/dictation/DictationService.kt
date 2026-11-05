@@ -25,6 +25,8 @@ import kotlinx.coroutines.sync.withLock
 import me.arianb.usb_hid_client.MainActivity
 import me.arianb.usb_hid_client.R
 import me.arianb.usb_hid_client.hid_utils.KeyCodeTranslation
+import me.arianb.usb_hid_client.hid_utils.OutputRouting
+import me.arianb.usb_hid_client.settings.LoopbackSetting
 import me.arianb.usb_hid_client.settings.UserPreferencesRepository
 import java.io.*
 import java.net.HttpURLConnection
@@ -228,10 +230,10 @@ class DictationService : Service() {
                 refreshSessions()
                 predecessor?.await()
                 session.phase = DictationPhase.SENDING
-                session.message = if (UserPreferencesRepository.getInstance(application).userPreferencesFlow.value.isLoopbackModeEnabled)
-                    "Typing on phone…" else "Typing to connected device…"
+                val loopback = withContext(Dispatchers.IO) { keyboardUsesLoopback() }
+                session.message = if (loopback) "Typing on phone…" else "Typing to connected device…"
                 refreshSessions()
-                val sent = withContext(Dispatchers.IO) { typing.withLock { sendText(text) } }
+                val sent = withContext(Dispatchers.IO) { typing.withLock { sendText(text, loopback) } }
                 terminalMessage = if (sent) "Sent transcription" else "Dictation discarded: no USB host connected"
                 timber.log.Timber.i("Dictation %d delivery completed: %s", session.request, sent)
             } catch (cancelled: CancellationException) {
@@ -327,9 +329,16 @@ class DictationService : Service() {
         return Shell.cmd("cat /sys/class/udc/*/state").exec().out.any { it.trim() == "configured" }
     }
 
-    private suspend fun sendText(text: String): Boolean {
+    /** Blocking. Automatic output probes the host now because the app's monitor may not be running. */
+    private fun keyboardUsesLoopback(): Boolean =
+        when (UserPreferencesRepository.getInstance(application).userPreferencesFlow.value.keyboardLoopback) {
+            LoopbackSetting.Usb -> false
+            LoopbackSetting.Loopback -> true
+            LoopbackSetting.Auto -> !OutputRouting.probeUsbHost()
+        }
+
+    private suspend fun sendText(text: String, loopback: Boolean): Boolean {
         val preferences = UserPreferencesRepository.getInstance(application).userPreferencesFlow.value
-        val loopback = preferences.isLoopbackModeEnabled
         if (!loopback && !usbConnected()) return false
         // HID characters assume a US keyboard layout. Convert common punctuation
         // and decomposable accents rather than silently dropping characters.

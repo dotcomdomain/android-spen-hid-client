@@ -12,6 +12,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
 import me.arianb.usb_hid_client.R
+import me.arianb.usb_hid_client.hid_utils.OutputRouting
 import me.arianb.usb_hid_client.settings.AppSettings.AppThemePreference
 import me.arianb.usb_hid_client.settings.AppSettings.DynamicColors
 import me.arianb.usb_hid_client.settings.AppSettings.EnablePrecisionTouchpad
@@ -31,7 +32,8 @@ import me.arianb.usb_hid_client.settings.AppSettings.SpenHybridSensitivity
 import me.arianb.usb_hid_client.settings.AppSettings.SpenMouseSensitivity
 import me.arianb.usb_hid_client.settings.AppSettings.TouchpadCharacterDevicePath
 import me.arianb.usb_hid_client.settings.AppSettings.TouchpadFullscreenInLandscape
-import me.arianb.usb_hid_client.settings.AppSettings.TouchpadLoopbackMode
+import me.arianb.usb_hid_client.settings.AppSettings.KeyboardOutput
+import me.arianb.usb_hid_client.settings.AppSettings.PointerOutput
 import me.arianb.usb_hid_client.settings.AppSettings.TouchpadMouseSensitivity
 import me.arianb.usb_hid_client.settings.AppSettings.UsbGadgetPath
 import me.arianb.usb_hid_client.ui.theme.PaddingNormal
@@ -75,6 +77,14 @@ fun SettingsPage() {
         }
 
         PreferenceCategory(
+            title = stringResource(R.string.output_header),
+        ) {
+            PointerOutput()
+            PreferenceDivider()
+            KeyboardOutput()
+        }
+
+        PreferenceCategory(
             title = stringResource(R.string.direct_input),
         ) {
             MediaKeyPassthrough()
@@ -91,8 +101,6 @@ fun SettingsPage() {
             title = stringResource(R.string.touchpad_label),
         ) {
             TouchpadFullscreenInLandscape()
-            PreferenceDivider()
-            TouchpadLoopbackMode()
             PreferenceDivider()
             EnablePrecisionTouchpad()
         }
@@ -190,11 +198,49 @@ private object AppSettings {
     }
 
     @Composable
-    fun TouchpadLoopbackMode() {
-        SwitchPreference(
-            title = stringResource(R.string.touchpad_loopback_mode_title),
-            summary = stringResource(R.string.touchpad_loopback_mode_summary),
-            preference = AppPreference.LoopbackMode
+    fun PointerOutput(settingsViewModel: SettingsViewModel = viewModel()) {
+        val preferencesState by settingsViewModel.userPreferencesFlow.collectAsState()
+        OutputTargetPreference(
+            title = stringResource(R.string.pointer_output_title),
+            selected = preferencesState.pointerLoopback,
+            preference = AppPreference.PointerLoopbackMode,
+        )
+    }
+
+    @Composable
+    fun KeyboardOutput(settingsViewModel: SettingsViewModel = viewModel()) {
+        val preferencesState by settingsViewModel.userPreferencesFlow.collectAsState()
+        OutputTargetPreference(
+            title = stringResource(R.string.keyboard_output_title),
+            selected = preferencesState.keyboardLoopback,
+            preference = AppPreference.KeyboardLoopbackMode,
+        )
+    }
+
+    @Composable
+    private fun OutputTargetPreference(
+        title: String,
+        selected: LoopbackSetting,
+        preference: ObjectPreferenceKey<LoopbackSetting>,
+        settingsViewModel: SettingsViewModel = viewModel(),
+    ) {
+        val usbHostConnected by OutputRouting.usbHostConnected.collectAsState()
+        val summary = if (selected == LoopbackSetting.Auto) {
+            val current = when (usbHostConnected) {
+                true -> R.string.output_target_auto_now_usb
+                false -> R.string.output_target_auto_now_loopback
+                null -> R.string.output_target_auto_checking
+            }
+            stringResource(current)
+        } else {
+            stringResource(selected.id)
+        }
+        BasicListPreference(
+            title = title,
+            options = LoopbackSetting.values,
+            selected = selected,
+            summary = summary,
+            onPreferenceClicked = { settingsViewModel.setPreference(preference, it) }
         )
     }
 

@@ -472,6 +472,7 @@ fun <T : SealedString> BasicListPreference(
     options: List<T>,
     selected: T,
     enabled: Boolean = true,
+    summary: String? = null,
     onPreferenceClicked: ((thisSealedString: T) -> Unit),
 ) {
     var isShowingAlert by remember { mutableStateOf(false) }
@@ -479,7 +480,7 @@ fun <T : SealedString> BasicListPreference(
 
     OnClickPreference(
         title = title,
-        summary = selectedThemeLabel,
+        summary = summary ?: selectedThemeLabel,
         enabled = enabled,
         onClick = { isShowingAlert = true },
         trailingContent = {
